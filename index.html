@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#111214">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mô phỏng tủ điện</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: công cụ kỹ thuật, tối, tập trung như phần mềm thiết kế tủ điện.
+   IDEA: tấm lưới lắp ráp tủ điện; dây có điện sáng lên khi chạy mô phỏng.
+   PICTURE: chính bản vẽ đang chạy.
+   COLOUR+TYPE: nền than #111214, nhấn teal #0f9b8e, dây có điện cam #ff8a3d; Geist.
+   LAYOUT: canvas toàn màn hình, thanh công cụ dưới, thư viện trái, thuộc tính phải. */
+:root{color-scheme:dark;--bg:#111214;--panel:#17191c;--line:#2a2d32;--ink:#e8eaed;--mut:#8b9098;--acc:#0f9b8e;--acc2:#14b8a6;--warn:#ff8a3d;--bad:#ef4444}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 Geist,system-ui,sans-serif;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.hide{display:none!important}
+/* ---------- home ---------- */
+#home{position:absolute;inset:0;display:flex;flex-direction:column}
+.hbar{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.logo{width:30px;height:30px;border-radius:8px;background:var(--acc);display:grid;place-items:center}
+.hbar h1{font-size:19px;font-weight:600;margin:0;flex:1}
+.hlist{flex:1;overflow:auto;padding:12px 20px 110px;max-width:1100px;width:100%;margin:0 auto}
+.card{display:flex;gap:14px;align-items:flex-start;padding:14px;border-radius:10px;border:1px solid transparent;cursor:pointer}
+.card:hover{background:#1a1c20;border-color:var(--line)}
+.card .ic{width:36px;height:36px;border-radius:8px;background:#1f2a2a;display:grid;place-items:center;flex:none;color:var(--acc2)}
+.card b{display:block;font-weight:600;font-size:15px}
+.card p{margin:3px 0 0;color:var(--mut);font-size:13px;max-width:900px}
+.card .acts{margin-left:auto;display:flex;gap:6px;flex:none}
+.ibtn{background:transparent;border:1px solid transparent;border-radius:8px;min-width:36px;height:36px;display:inline-grid;place-items:center;color:var(--mut);padding:0 8px}
+.ibtn:hover{background:#23262b;color:var(--ink)}
+.ibtn:focus-visible,.btn:focus-visible{outline:2px solid var(--acc2);outline-offset:1px}
+.btn{background:var(--acc);border:0;border-radius:10px;height:44px;padding:0 18px;font-weight:600;display:inline-flex;align-items:center;gap:8px;color:#fff}
+.btn.ghost{background:#23262b}
+.btn.danger{background:var(--bad)}
+.fab{position:absolute;right:24px;bottom:84px;box-shadow:0 8px 24px #0008}
+.tabs{position:absolute;left:0;right:0;bottom:0;display:flex;border-top:1px solid var(--line);background:var(--panel)}
+.tabs button{flex:1;background:none;border:0;padding:8px 0 10px;color:var(--mut);display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px}
+.tabs button span{width:56px;height:28px;border-radius:14px;display:grid;place-items:center}
+.tabs button.on{color:var(--ink)}.tabs button.on span{background:var(--acc)}
+.empty{color:var(--mut);text-align:center;padding:80px 20px}
+/* ---------- editor ---------- */
+#ed{position:absolute;inset:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+#cv.sim .ia{cursor:pointer}
+#cv.sim [data-w],#cv.sim .term{pointer-events:none}
+#cv text{pointer-events:none}
+.term{cursor:crosshair}
+.term:hover circle.o{stroke:var(--acc2);stroke-width:2.5}
+.wire{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.flow{fill:none;stroke-dasharray:3 9;animation:fl .6s linear infinite;stroke-linecap:round}
+@keyframes fl{to{stroke-dashoffset:-12}}
+@media(prefers-reduced-motion:reduce){.flow{animation:none}}
+.top{position:absolute;left:12px;top:10px;right:12px;display:flex;align-items:center;gap:10px;pointer-events:none}
+.top>*{pointer-events:auto}
+#ed.po .top{left:272px}
+#pname{background:transparent;border:1px solid transparent;border-radius:8px;padding:6px 8px;font-size:15px;font-weight:600;width:min(320px,50vw)}
+#pname:hover,#pname:focus{border-color:var(--line);background:var(--panel);outline:0}
+.chip{font-size:12px;padding:4px 10px;border-radius:20px;background:#23262b;color:var(--mut)}
+.chip.run{background:#0f3d38;color:#5eead4}
+.chip.pause{background:#3d300f;color:#fcd34d}
+.hint{color:var(--mut);font-size:12px;margin-left:auto;text-align:right}
+.bar{position:absolute;left:0;right:0;bottom:0;height:48px;background:var(--panel);border-top:1px solid var(--line);display:flex;align-items:center;gap:2px;padding:0 6px}
+.bar .sep{width:1px;height:24px;background:var(--line);margin:0 6px}
+.bar .ibtn.on{background:#0f3d38;color:#5eead4}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid #0000;cursor:pointer;flex:none}
+.sw.on{border-color:#fff}
+.swrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+/* palette */
+#pal{position:absolute;left:0;top:0;bottom:48px;width:260px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:3}
+#pal .s{padding:10px;border-bottom:1px solid var(--line)}
+#q{width:100%;height:40px;border-radius:8px;border:1px solid var(--line);background:#111214;padding:0 12px;font-size:16px}
+#pl{overflow:auto;flex:1;padding:4px 6px 20px}
+.cat{display:flex;align-items:center;gap:8px;padding:10px 8px;border-radius:8px;cursor:pointer;font-weight:500}
+.cat:hover{background:#1f2226}
+.cat i{width:8px;height:8px;border-radius:50%}
+.cat em{margin-left:auto;font-style:normal;color:var(--mut);font-size:12px}
+.it{display:flex;align-items:center;gap:10px;padding:6px 8px 6px 18px;border-radius:8px;cursor:grab;font-size:13px}
+.it:hover{background:#1f2226}
+.it svg{flex:none;width:34px;height:34px}
+/* inspector */
+#ins{position:absolute;right:12px;top:56px;width:300px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;z-index:3;box-shadow:0 12px 30px #0006}
+#ins h3{margin:0 0 2px;font-size:15px}
+#ins .k{color:var(--mut);font-size:12px;margin:0 0 12px}
+#ins label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+#ins input,#ins select{width:100%;height:40px;border-radius:8px;border:1px solid var(--line);background:#111214;padding:0 10px;font-size:16px}
+#ins .row{display:flex;gap:8px;margin-top:14px}
+#ins .row .btn{flex:1;height:40px;padding:0 10px;font-size:13px;justify-content:center}
+#ins textarea{width:100%;border-radius:8px;border:1px solid var(--line);background:#0b0c0e;color:#d1fae5;font:13px/1.5 ui-monospace,Consolas,monospace;padding:8px;resize:vertical}
+.perr{margin:6px 0 0;font-size:12px;color:#4ade80;white-space:pre-wrap}.perr.bad{color:#f87171}
+.phelp{font-size:12px;color:var(--mut);margin-top:6px}.phelp p{margin:6px 0 0;line-height:1.6}.phelp summary{cursor:pointer}
+#ins{max-height:calc(100vh - 130px);overflow:auto}
+/* log */
+#log{position:absolute;right:12px;bottom:60px;width:min(360px,calc(100vw - 24px));max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:6px;z-index:2}
+.msg{background:#1c1f23ee;border:1px solid var(--line);border-left:3px solid var(--acc2);border-radius:8px;padding:8px 10px;font-size:13px}
+.msg.w{border-left-color:var(--warn)}.msg.e{border-left-color:var(--bad)}
+.msg small{color:var(--mut);margin-right:6px}
+/* modal */
+#mod{position:absolute;inset:0;background:#000a;display:grid;place-items:center;z-index:10}
+#mod .box{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;width:min(420px,92vw)}
+#mod h3{margin:0 0 12px}
+#mod input{width:100%;height:44px;border-radius:8px;border:1px solid var(--line);background:#111214;padding:0 12px;font-size:16px}
+#mod .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+@media(max-width:700px){#pal{width:100%;max-width:300px}.hint{display:none}#ins{left:12px;right:12px;width:auto;top:auto;bottom:60px}}
+</style>
+</head>
+<body>
+<!-- ================= HOME ================= -->
+<div id="home">
+  <div class="hbar">
+    <div class="logo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
+    <h1>Mô phỏng tủ điện</h1>
+    <button class="btn ghost" id="imp">Nhập dự án</button>
+  </div>
+  <div class="hlist" id="hlist"></div>
+  <button class="btn fab" id="newp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>Dự án mới</button>
+  <div class="tabs">
+    <button id="tp" class="on"><span><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></span>Dự án</button>
+    <button id="tx"><span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/></svg></span>Ví dụ</button>
+  </div>
+</div>
+
+<!-- ================= EDITOR ================= -->
+<div id="ed" class="hide">
+  <svg id="cv" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#2b2e33"/></pattern>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
+    </defs>
+    <rect id="bgr" width="100%" height="100%" fill="url(#dots)"/>
+    <g id="world"></g>
+  </svg>
+  <div class="top">
+    <input id="pname" aria-label="Tên dự án">
+    <span class="chip" id="mode">Chế độ lắp ráp</span>
+    <span class="hint" id="hint"></span>
+  </div>
+  <div id="pal" class="hide"><div class="s"><input id="q" placeholder="Tìm linh kiện"></div><div id="pl"></div></div>
+  <div id="ins" class="hide"></div>
+  <div id="log"></div>
+  <div class="bar" id="bar"></div>
+</div>
+<div id="mod" class="hide"><div class="box" id="modb"></div></div>
+
+<script>
+{
+// ====================== helpers ======================
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9);
+const snap=v=>Math.round(v/10)*10;
+const IC={
+ back:'<path d="M19 12H5M11 6l-6 6 6 6"/>',plus:'<path d="M12 5v14M5 12h14"/>',play:'<path d="M7 5v14l11-7z" fill="#22c55e" stroke="#22c55e"/>',
+ stop:'<rect x="6" y="6" width="12" height="12" rx="1" stroke="#ef4444"/>',pause:'<path d="M8 5v14M16 5v14"/>',fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/><rect x="8" y="8" width="8" height="8"/>',
+ lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',unlock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>',
+ undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>',
+ reset:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+ copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+ edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',rot:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',dl:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',ul:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',file:'<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',cap:'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>'
+};
+const ic=(n,s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
+const WCOL={nâu:'#8b5a2b',đen:'#30343a',xám:'#9aa0a6',xanh:'#2f80ed',vàngxanh:'#a3c832',đỏ:'#e04848',xanhđậm:'#3248c8',trắng:'#e8e8e8'};
+
+// ====================== drawing primitives ======================
+const R=(x,y,w,h,f,s='none',rx=4,ex='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${f}" stroke="${s}" ${ex}/>`;
+const Tx=(x,y,t,sz=8,f='#333',a='middle',w=500)=>`<text x="${x}" y="${y}" font-size="${sz}" fill="${f}" text-anchor="${a}" font-weight="${w}">${esc(t)}</text>`;
+const tag=(l,x,y)=>{const w=Math.max(26,l.length*6+10);return R(x-w/2,y-7,w,14,'#f5d000','#a88f00',2)+Tx(x,y+3.5,l,9,'#111','middle',600)};
+const lever=(x,y,on,trip)=>R(x-9,y-18,18,36,'#d0d5da','#9aa3ab',3)+R(x-7,on&&!trip?y-16:y+2,14,14,trip?'#e74c3c':on?'#1b8f4a':'#4a4f55','none',2)+Tx(x,on&&!trip?y-6:y+12,trip?'T':on?'I':'O',8,'#fff');
+const strip=(w,y,h,f='#cfd5da')=>R(2,y,w-4,h,f,'none',2);
+
+// ====================== component library ======================
+// terminal: [id,x,y]   side inferred: y==0 top, y==h bottom
+const T=(id,x,y)=>({id,x,y});
+const COIL_OPTS=['230VAC','24VDC'];
+const TY={};
+const def=(k,o)=>{TY[k]=Object.assign({k,params:{},pdef:[],conns:()=>[]},o)};
+const CATS=[['nguon','Nguồn','#22c55e'],['dau','Đầu nối','#a3c832'],['bv','Bảo vệ','#ef4444'],['kdt','Khởi động từ','#14b8a6'],['rl','Rơ le & timer','#3b82f6'],['dk','Thiết bị điều khiển','#a855f7'],['bh','Báo hiệu','#f59e0b'],['cc','Cơ cấu chấp hành','#9ca3af'],['cb','Cảm biến','#6366f1'],['do','Đo lường','#f97316'],['pp','Phân phối','#eab308'],['dc','Biến tần','#fb7185'],['plc','PLC','#22d3ee'],['qt','Quá trình','#38bdf8']];
+
+def('mains3',{name:'Nguồn 3 pha 400/230V',cat:'nguon',pre:'X',w:180,h:74,dark:1,
+ terms:[T('L1',25,74),T('L2',55,74),T('L3',85,74),T('N',125,74),T('PE',155,74)],
+ src:()=>({L1:'L1',L2:'L2',L3:'L3',N:'N',PE:'PE'}),
+ draw:(c)=>R(0,0,180,74,'#22262b','#3a3f47',6)+Tx(10,16,'NGUỒN 3P + N  400/230V 50Hz',8,'#cfd3d8','start',600)+
+  [['L1','#8b5a2b',25],['L2','#30343a',55],['L3','#9aa0a6',85],['N','#2f80ed',125],['PE','#a3c832',155]].map(([n,f,x])=>`<circle cx="${x}" cy="40" r="9" fill="${f}" stroke="#555"/>`+Tx(x,62,n,8,'#cfd3d8')).join('')});
+def('mains1',{name:'Nguồn 1 pha 230V',cat:'nguon',pre:'X',w:110,h:74,dark:1,
+ terms:[T('L',22,74),T('N',55,74),T('PE',88,74)],src:()=>({L:'L1',N:'N',PE:'PE'}),
+ draw:()=>R(0,0,110,74,'#22262b','#3a3f47',6)+Tx(8,16,'NGUỒN 1P 230V',8,'#cfd3d8','start',600)+
+  [['L','#8b5a2b',22],['N','#2f80ed',55],['PE','#a3c832',88]].map(([n,f,x])=>`<circle cx="${x}" cy="40" r="9" fill="${f}" stroke="#555"/>`+Tx(x,62,n,8,'#cfd3d8')).join('')});
+def('psu',{name:'Bộ nguồn 24V DC',cat:'nguon',pre:'G',w:100,h:110,dark:1,prot:0,
+ terms:[T('L',25,0),T('N',55,0),T('+',30,110),T('-',70,110)],
+ src:(c,r)=>r.on&&!r.trip?{'+':'+24','-':'0V'}:{},
+ closed:r=>!r.trip,trip:r=>{r.trip=1},
+ update:(c,r,X)=>{const v=X.V(c.id,'L','N');const on=v.k==='AC'&&v.v>=230;const ch=on!==!!r.on;r.on=on;return ch},
+ draw:(c,r)=>R(0,0,100,110,'#c9ced3','#8d959c',5)+R(8,22,84,66,'#2a2e33','none',3)+Tx(50,46,'24V DC',12,'#e8eaed','middle',600)+Tx(50,62,'POWER SUPPLY',7,'#9aa0a6')+
+  `<circle cx="80" cy="78" r="4" fill="${r&&r.trip?'#ef4444':r&&r.on?'#22c55e':'#3a3f45'}"/>`+Tx(16,16,'L',8)+Tx(46,16,'N',8)+Tx(30,102,'+',9)+Tx(70,102,'−',9)+tag(c.label,30,80)});
+
+def('xterm',{name:'Cầu đấu (domino)',cat:'dau',pre:'X',w:24,h:70,
+ terms:[T('1',12,0),T('2',12,70)],conns:()=>[['1','2']],
+ draw:c=>R(0,0,24,70,'#d8dde2','#9aa3ab',3)+R(4,24,16,22,'#f5f6f7','none',1)+Tx(12,38,c.label.replace('-',''),7,'#333')});
+def('xterm4',{name:'Thanh nối 4 điểm',cat:'dau',pre:'X',w:90,h:40,
+ terms:[T('1',15,0),T('2',35,0),T('3',55,0),T('4',75,0)],conns:()=>[['1','2'],['2','3'],['3','4']],
+ draw:c=>R(0,0,90,40,'#c9a227','#8a6d10',3)+Tx(45,30,'BUS '+c.label,8,'#222')});
+
+const mcbConns=(r,pairs)=>r.on&&!r.trip?pairs:[];
+const brkClick=r=>{if(r.trip){r.trip=0;r.on=0}else r.on=r.on?0:1};
+def('mcb1',{name:'MCB 1 cực',cat:'bv',pre:'Q',w:40,h:110,prot:1,st:{on:1},ia:1,
+ terms:[T('1',20,0),T('2',20,110)],conns:(c,r)=>mcbConns(r,[['1','2']]),closed:r=>r.on&&!r.trip,trip:r=>{r.trip=1},down:brkClick,
+ params:{In:'6A'},pdef:[['In','Dòng định mức',['2A','6A','10A','16A','20A']]],
+ draw:(c,r)=>R(0,0,40,110,'#eef0f2','#9aa3ab',4)+strip(40,2,22)+strip(40,86,22)+lever(20,55,r.on,r.trip)+Tx(20,17,'1',8)+Tx(20,100,'2',8)+Tx(20,82,'C'+c.params.In,7,'#555')+tag(c.label,20,31)});
+def('mcb2',{name:'MCB 2 cực',cat:'bv',pre:'Q',w:64,h:110,prot:1,st:{on:1},ia:1,
+ terms:[T('1',18,0),T('3',46,0),T('2',18,110),T('4',46,110)],conns:(c,r)=>mcbConns(r,[['1','2'],['3','4']]),closed:r=>r.on&&!r.trip,trip:r=>{r.trip=1},down:brkClick,
+ draw:(c,r)=>R(0,0,64,110,'#eef0f2','#9aa3ab',4)+strip(64,2,22)+strip(64,86,22)+lever(32,55,r.on,r.trip)+Tx(18,17,'1',8)+Tx(46,17,'3',8)+Tx(18,100,'2',8)+Tx(46,100,'4',8)+tag(c.label,32,31)});
+def('mcb3',{name:'MCB 3 cực',cat:'bv',pre:'Q',w:100,h:110,prot:2,st:{on:1},ia:1,
+ terms:[T('1',20,0),T('3',50,0),T('5',80,0),T('2',20,110),T('4',50,110),T('6',80,110)],conns:(c,r)=>mcbConns(r,[['1','2'],['3','4'],['5','6']]),closed:r=>r.on&&!r.trip,trip:r=>{r.trip=1},down:brkClick,
+ params:{In:'16A'},pdef:[['In','Dòng định mức',['6A','10A','16A','25A','32A','63A']]],
+ draw:(c,r)=>R(0,0,100,110,'#eef0f2','#9aa3ab',4)+strip(100,2,22)+strip(100,86,22)+lever(50,55,r.on,r.trip)+['1','3','5'].map((t,i)=>Tx(20+i*30,17,t,8)+Tx(20+i*30,100,String(+t+1),8)).join('')+Tx(80,58,'C'+c.params.In,7,'#555')+tag(c.label,22,40)});
+def('mpcb',{name:'CB bảo vệ động cơ (MPCB)',cat:'bv',pre:'Q',w:130,h:130,prot:2,st:{on:1},ia:1,
+ terms:[T('1',20,0),T('3',45,0),T('5',70,0),T('13',110,0),T('2',20,130),T('4',45,130),T('6',70,130),T('14',110,130)],
+ conns:(c,r)=>mcbConns(r,[['1','2'],['3','4'],['5','6'],['13','14']]),closed:r=>r.on&&!r.trip,trip:r=>{r.trip=1},down:brkClick,
+ draw:(c,r)=>{const on=r.on&&!r.trip;return R(0,0,130,130,'#eef0f2','#9aa3ab',5)+strip(130,2,24)+strip(130,104,24)+R(6,30,118,16,'#0d8a8a','none',2)+Tx(65,41,'MPCB',8,'#fff','middle',600)+
+  `<circle cx="55" cy="76" r="20" fill="#30343a"/><g transform="rotate(${on?0:-90} 55 76)">${R(51,58,8,36,'#e8eaed','none',2)}</g>`+R(92,62,24,14,on?'#1b8f4a':r.trip?'#e74c3c':'#4a4f55','none',2)+Tx(104,72,on?'ON':r.trip?'TRIP':'OFF',7,'#fff')+
+  ['1','3','5'].map((t,i)=>Tx(20+i*25,18,t,8)+Tx(20+i*25,122,String(+t+1),8)).join('')+Tx(110,18,'13',8)+Tx(110,122,'14',8)+tag(c.label,104,92)}});
+def('ol',{name:'Rơ le nhiệt (OL)',cat:'bv',pre:'F',w:124,h:110,ia:1,
+ terms:[T('1',18,0),T('3',40,0),T('5',62,0),T('95',88,0),T('97',108,0),T('2',18,110),T('4',40,110),T('6',62,110),T('96',88,110),T('98',108,110)],
+ conns:(c,r)=>[['1','2'],['3','4'],['5','6'],r.trip?['97','98']:['95','96']],down:r=>{r.trip=r.trip?0:1},
+ draw:(c,r)=>R(0,0,124,110,'#eef0f2','#9aa3ab',5)+strip(124,2,22)+strip(124,86,22)+R(6,28,112,14,'#1565c0','none',2)+Tx(62,38,'OVERLOAD RELAY',7,'#fff','middle',600)+
+  `<circle cx="34" cy="62" r="9" fill="#1e88e5" stroke="#0d47a1"/>`+Tx(34,65,'R',8,'#fff')+R(54,54,30,16,r.trip?'#e74c3c':'#4a4f55','none',2)+Tx(69,65,r.trip?'TRIP':'OK',7,'#fff')+
+  ['1','3','5'].map((t,i)=>Tx(18+i*22,17,t,7)+Tx(18+i*22,101,String(+t+1),7)).join('')+Tx(88,17,'95',7)+Tx(108,17,'97',7)+Tx(88,101,'96',7)+Tx(108,101,'98',7)+tag(c.label,102,64)});
+
+const coilP={coil:'230VAC'},coilD=[['coil','Điện áp cuộn hút',COIL_OPTS]];
+const coilUpd=(a,b)=>(c,r,X)=>{if(r.burnt){return false}const s=X.coil(c,a,b,c.params.coil);if(s==='burn'){r.burnt=1;r.on=0;X.log('e',`${c.label}: cháy cuộn hút (sai điện áp, cuộn ${c.params.coil})`);return true}const on=s==='on';const ch=on!==!!r.on;r.on=on;return ch};
+def('contactor',{name:'Contactor 3P + 1NO 1NC',cat:'kdt',pre:'KM',w:140,h:150,params:coilP,pdef:coilD,
+ terms:[T('A1',14,0),T('1',36,0),T('3',58,0),T('5',80,0),T('13',102,0),T('21',124,0),T('A2',14,150),T('2',36,150),T('4',58,150),T('6',80,150),T('14',102,150),T('22',124,150)],
+ conns:(c,r)=>r.on?[['1','2'],['3','4'],['5','6'],['13','14']]:[['21','22']],update:coilUpd('A1','A2'),
+ draw:(c,r)=>R(0,0,140,150,'#f1f3f4','#9aa3ab',5)+strip(140,2,26)+strip(140,122,26)+R(4,32,132,14,'#0d8a8a','none',2)+Tx(70,42,'CONTACTOR',8,'#fff','middle',600)+
+  R(40,54,60,40,'#2b2f34','none',3)+R(46,60,22,28,r.on?'#ff7a1a':'#e8590c','none',2,`opacity="${r.on?1:.35}"`)+R(72,60,22,28,r.on?'#ff7a1a':'#e8590c','none',2,`opacity="${r.on?1:.35}"`)+
+  (r.burnt?Tx(70,108,'CHÁY CUỘN HÚT',8,'#c62828','middle',700):Tx(70,108,c.params.coil,8,'#555'))+
+  ['A1','1','3','5','13','21'].map((t,i)=>Tx(14+i*22,20,t,7)).join('')+['A2','2','4','6','14','22'].map((t,i)=>Tx(14+i*22,138,t,7)).join('')+tag(c.label,118,72)});
+def('relay',{name:'Rơ le trung gian 2CO',cat:'rl',pre:'K',w:130,h:110,params:coilP,pdef:coilD,
+ terms:[T('11',20,0),T('21',60,0),T('A1',110,0),T('12',10,110),T('14',30,110),T('22',50,110),T('24',70,110),T('A2',110,110)],
+ conns:(c,r)=>r.on?[['11','14'],['21','24']]:[['11','12'],['21','22']],update:coilUpd('A1','A2'),
+ draw:(c,r)=>R(0,0,130,110,'#dfe3e7','#9aa3ab',5)+strip(130,2,22)+strip(130,86,22)+R(10,28,110,52,'#c5d3df','#9fb3c4',4,'opacity=".8"')+
+  `<circle cx="104" cy="40" r="4" fill="${r.on?'#ef4444':'#5a1e1e'}"/>`+Tx(20,46,'RELAY',9,'#333','start',600)+Tx(20,60,r.burnt?'CHÁY CUỘN':c.params.coil,8,r.burnt?'#c62828':'#555','start')+
+  [['11',20],['21',60],['A1',110]].map(([t,x])=>Tx(x,17,t,7)).join('')+[['12',10],['14',30],['22',50],['24',70],['A2',110]].map(([t,x])=>Tx(x,101,t,7)).join('')+tag(c.label,80,70)});
+const tmrDraw=kind=>(c,r)=>{const t=+c.params.t||0,el=Math.min(r.el||0,t);const left=kind==='on'?(r.on&&!r.out?t-el:0):(!r.on&&r.out?t-el:0);const a=t?(-130+260*(left>0?(t-left)/t:0)):-130;
+ return R(0,0,90,110,'#eef0f2','#9aa3ab',5)+strip(90,2,22)+strip(90,86,22)+`<circle cx="45" cy="52" r="16" fill="#fff" stroke="#9aa3ab"/><line x1="45" y1="52" x2="45" y2="40" stroke="#c62828" stroke-width="2" transform="rotate(${a} 45 52)"/>`+
+  `<circle cx="12" cy="34" r="3" fill="${r.on?'#22c55e':'#2c3a30'}"/><circle cx="78" cy="34" r="3" fill="${r.out?'#f59e0b':'#3a3426'}"/>`+Tx(45,78,left>0?left.toFixed(1)+' s':t+' s',8,'#333','middle',600)+
+  Tx(20,17,'15',7)+Tx(70,17,'A1',7)+Tx(10,101,'16',7)+Tx(30,101,'18',7)+Tx(70,101,'A2',7)+tag(c.label,45,-10)+Tx(45,30,kind==='on'?'ON-DELAY':'OFF-DELAY',6,'#555')};
+def('timer_on',{name:'Timer trễ đóng (on-delay)',cat:'rl',pre:'KT',w:90,h:110,params:{t:'5',coil:'230VAC'},pdef:[['t','Thời gian (s)','num'],...coilD],
+ terms:[T('15',20,0),T('A1',70,0),T('16',10,110),T('18',30,110),T('A2',70,110)],
+ conns:(c,r)=>r.out?[['15','18']]:[['15','16']],
+ update:(c,r,X)=>{const ch=coilUpd('A1','A2')(c,r,X);if(!r.on){r.el=0;if(r.out){r.out=0;return true}}return ch},
+ tick:(c,r,dt)=>{if(r.on){r.el=(r.el||0)+dt;if(!r.out&&r.el>=(+c.params.t||0)){r.out=1;return true}}return false},draw:tmrDraw('on')});
+def('timer_off',{name:'Timer trễ mở (off-delay)',cat:'rl',pre:'KT',w:90,h:110,params:{t:'5',coil:'230VAC'},pdef:[['t','Thời gian (s)','num'],...coilD],
+ terms:[T('15',20,0),T('A1',70,0),T('16',10,110),T('18',30,110),T('A2',70,110)],
+ conns:(c,r)=>r.out?[['15','18']]:[['15','16']],
+ update:(c,r,X)=>{const ch=coilUpd('A1','A2')(c,r,X);if(r.on){r.el=0;if(!r.out){r.out=1;return true}}return ch},
+ tick:(c,r,dt)=>{if(!r.on&&r.out){r.el=(r.el||0)+dt;if(r.el>=(+c.params.t||0)){r.out=0;return true}}return false},draw:tmrDraw('off')});
+
+const pbDraw=(no)=>(c,r)=>{const col=c.params.color==='Xanh'?'#22c55e':c.params.color==='Đỏ'?'#ef4444':c.params.color==='Vàng'?'#facc15':'#e5e7eb';const p=r.p;
+ return R(0,0,60,90,'#25282c','#3e434a',8)+(p?R(-3,-3,66,96,'none','#22d3ee',10,'stroke-width="2.5"'):'')+`<circle cx="30" cy="45" r="21" fill="#111"/><circle cx="30" cy="45" r="${p?15:18}" fill="${col}" ${p?'opacity=".75"':''}/><circle cx="25" cy="39" r="${p?4:6}" fill="#fff" opacity=".25"/>`+
+  Tx(54,12,no?'3':'1',7,'#bbb','end')+Tx(54,84,no?'4':'2',7,'#bbb','end')+tag(c.label,30,13)+Tx(6,84,no?'NO':'NC',6,'#888','start')};
+def('pb_no',{name:'Nút nhấn thường mở (NO)',cat:'dk',pre:'S',w:60,h:90,dark:1,ia:1,params:{color:'Xanh'},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng']]],
+ terms:[T('3',30,0),T('4',30,90)],conns:(c,r)=>r.p?[['3','4']]:[],down:r=>{r.p=1},up:r=>{r.p=0},draw:pbDraw(1)});
+def('pb_nc',{name:'Nút nhấn thường đóng (NC)',cat:'dk',pre:'S',w:60,h:90,dark:1,ia:1,params:{color:'Đỏ'},pdef:[['color','Màu',['Đỏ','Xanh','Vàng','Trắng']]],
+ terms:[T('1',30,0),T('2',30,90)],conns:(c,r)=>r.p?[]:[['1','2']],down:r=>{r.p=1},up:r=>{r.p=0},draw:pbDraw(0)});
+def('estop',{name:'Nút dừng khẩn (E-stop)',cat:'dk',pre:'S',w:70,h:100,ia:1,
+ terms:[T('1',35,0),T('2',35,100)],conns:(c,r)=>r.p?[]:[['1','2']],down:r=>{r.p=r.p?0:1},
+ draw:(c,r)=>R(0,0,70,100,'#f1c40f','#a8870a',8)+`<circle cx="35" cy="50" r="26" fill="#d4a80c"/><circle cx="35" cy="50" r="${r.p?17:21}" fill="${r.p?'#991b1b':'#dc2626'}"/>`+Tx(35,92,r.p?'ĐÃ NHẤN':'1 — 2 NC',6,'#3a2e00','middle',600)+Tx(64,12,'1',7,'#3a2e00','end')+tag(c.label,35,13)});
+def('sel',{name:'Công tắc xoay 2 vị trí',cat:'dk',pre:'S',w:60,h:90,dark:1,ia:1,
+ terms:[T('13',30,0),T('14',30,90)],conns:(c,r)=>r.p?[['13','14']]:[],down:r=>{r.p=r.p?0:1},
+ draw:(c,r)=>R(0,0,60,90,'#25282c','#3e434a',8)+`<circle cx="30" cy="47" r="19" fill="#111"/><g transform="rotate(${r.p?45:-45} 30 47)">${R(25,30,10,34,'#3a3f45','#555',4)}<line x1="30" y1="32" x2="30" y2="44" stroke="#fff" stroke-width="2"/></g>`+Tx(12,24,'0',8,'#bbb')+Tx(48,24,'1',8,'#bbb')+Tx(30,84,'13-14',6,'#888')+tag(c.label,30,13)});
+
+def('lamp',{name:'Đèn báo',cat:'bh',pre:'H',w:56,h:86,dark:1,params:{color:'Xanh',v:'230VAC'},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng','Lam']],['v','Điện áp',COIL_OPTS]],
+ terms:[T('X1',28,0),T('X2',28,86)],
+ post:(c,r,X)=>{if(r.burnt){r.lit=0;return}const s=X.coil(c,'X1','X2',c.params.v);if(s==='burn'){r.burnt=1;X.log('e',`${c.label}: cháy bóng đèn (sai điện áp)`)}r.lit=s==='on'},
+ draw:(c,r)=>{const col={Xanh:'#22c55e',Đỏ:'#ef4444',Vàng:'#facc15',Trắng:'#f8fafc',Lam:'#3b82f6'}[c.params.color];
+  return R(0,0,56,86,'#25282c','#3e434a',8)+(r.lit?`<circle cx="28" cy="43" r="24" fill="${col}" filter="url(#glow)" opacity=".8"/>`:'')+`<circle cx="28" cy="43" r="17" fill="#111"/><circle cx="28" cy="43" r="14" fill="${r.burnt?'#222':col}" opacity="${r.lit?1:.28}"/>`+
+  (r.burnt?Tx(28,46,'×',12,'#ef4444'):'')+Tx(53,10,'X1',6,'#aaa','end')+Tx(53,82,'X2',6,'#aaa','end')+tag(c.label,28,14)}});
+def('buzzer',{name:'Còi báo',cat:'bh',pre:'H',w:56,h:86,dark:1,params:{v:'230VAC'},pdef:[['v','Điện áp',COIL_OPTS]],
+ terms:[T('X1',28,0),T('X2',28,86)],post:(c,r,X)=>{r.lit=X.coil(c,'X1','X2',c.params.v)==='on'},
+ draw:(c,r)=>R(0,0,56,86,'#25282c','#3e434a',8)+`<circle cx="28" cy="43" r="17" fill="#111"/>`+[0,1,2].map(i=>`<circle cx="28" cy="43" r="${5+i*4}" fill="none" stroke="${r.lit?'#f59e0b':'#444'}" stroke-width="1.5"/>`).join('')+(r.lit?Tx(28,74,'BEEP',7,'#f59e0b','middle',700):'')+tag(c.label,28,14)});
+
+const motorBody=(c,r,w,termsTxt)=>{const run=r.run&&!r.burnt;const f=r.burnt?'#5a2a2a':run?(r.mode==='Y'?'#4caf50':'#2fa84f'):'#8a929b';
+ const fan=`<g transform="rotate(${r.ang||0} 18 80)"><circle cx="18" cy="80" r="14" fill="#555"/>${[0,120,240].map(a=>`<rect x="16" y="66" width="4" height="14" fill="#ccc" transform="rotate(${a} 18 80)"/>`).join('')}</g>`;
+ return R(30,40,w-40,80,f,'#333',10)+[0,1,2,3,4,5].map(i=>`<line x1="${42+i*((w-64)/5)}" y1="44" x2="${42+i*((w-64)/5)}" y2="116" stroke="#0003" stroke-width="3"/>`).join('')+R(4,74,30,12,'#aaa','#666',2)+fan+
+  R(w/2-(w-60)/2,0,w-60,34,'#2b2f34','#555',4)+R(w-38,48,28,22,'#f5d000','none',2)+Tx(w-24,62,c.label,8,'#111','middle',700)+termsTxt+
+  Tx(w/2,104,r.burnt?'CHÁY ĐỘNG CƠ':r.msg||'',8,'#fff','middle',600)};
+const phases=p=>['L1','L2','L3'].includes(p);
+const dirOf=(a,b,c)=>{const s=a+b+c;return['L1L2L3','L2L3L1','L3L1L2'].includes(s)?'thuận':'ngược'};
+const motorPost=kind=>(c,r,X,dt)=>{
+ if(r.burnt){r.run=0;return}
+ let run=0,mode='',msg='',sp=0;
+ const P=t=>X.pot(c.id,t);
+ if(kind===3){const a=P('U'),b=P('V'),d=P('W');const ph=[a,b,d].filter(phases);const u=new Set(ph);
+  if(u.size===3){run=1;msg='Chạy '+dirOf(a,b,d);sp=1}else if(u.size>=1&&ph.length>=2){msg='MẤT PHA';sp=-1}}
+ else{const a=P('U1'),b=P('V1'),d=P('W1');const u=new Set([a,b,d].filter(phases));
+  if(u.size===3){const n=['U2','V2','W2'];const nets=n.map(t=>X.net(c.id,t));const p2=n.map(P);
+   if(nets[0]===nets[1]&&nets[1]===nets[2]&&!p2[0]){run=1;mode='Y';msg='Sao (Y) '+dirOf(a,b,d);sp=.45}
+   else if(p2.every(phases)&&p2[0]!==a&&p2[1]!==b&&p2[2]!==d&&new Set(p2).size===3){run=1;mode='Δ';msg='Tam giác (Δ) '+dirOf(a,b,d);sp=1}
+   else if(p2.some(x=>x)||nets[0]!==nets[1]){msg='SAI ĐẤU DÂY';sp=-1}else{msg='Hở đầu U2 V2 W2'}}
+  else if(u.size>=1){msg='MẤT PHA';sp=-1}}
+ if(sp<0){r.sp1=(r.sp1||0)+dt;if(r.sp1>3){const ol=X.olFor(c);if(ol){ol.r.trip=1;X.log('w',`${ol.c.label} tác động: ${c.label} ${msg.toLowerCase()} quá 3 s`);r.sp1=0;X.dirty()}else if(r.sp1>6){r.burnt=1;X.log('e',`${c.label} cháy do ${msg.toLowerCase()} kéo dài, không có rơ le nhiệt bảo vệ`)}}}else r.sp1=0;
+ if(run&&(!r.run||msg!==r.base))X.log('i',`${c.label}: ${msg}`);r.base=msg;
+ const f=X.vfdFor(c);if(run&&f!==null){sp*=f/50;msg+=` ${f.toFixed(0)} Hz`}
+ r.run=run;r.mode=mode;r.msg=msg;r.dir=msg.includes('ngược')?-1:1;r.ang=((r.ang||0)+(run?r.dir*sp*900*dt:0))%360};
+def('motor3',{name:'Động cơ 3 pha (U V W)',cat:'cc',pre:'M',w:140,h:120,
+ terms:[T('U',40,0),T('V',60,0),T('W',80,0),T('PE',100,0)],post:motorPost(3),
+ draw:(c,r)=>motorBody(c,r,140,Tx(40,26,'U',7,'#ddd')+Tx(60,26,'V',7,'#ddd')+Tx(80,26,'W',7,'#ddd')+Tx(100,26,'PE',6,'#ddd'))});
+def('motor6',{name:'Động cơ 3 pha 6 đầu dây (Y/Δ)',cat:'cc',pre:'M',w:180,h:120,
+ terms:[T('U1',38,0),T('V1',58,0),T('W1',78,0),T('U2',102,0),T('V2',122,0),T('W2',142,0),T('PE',162,0)],post:motorPost(6),
+ draw:(c,r)=>motorBody(c,r,180,['U1','V1','W1','U2','V2','W2'].map((t,i)=>Tx([38,58,78,102,122,142][i],26,t,6,'#ddd')).join('')+Tx(162,26,'PE',6,'#ddd'))});
+
+def('limit',{name:'Công tắc hành trình 1CO',cat:'cb',pre:'B',w:70,h:90,ia:1,
+ terms:[T('11',35,0),T('12',18,90),T('14',52,90)],conns:(c,r)=>r.p?[['11','14']]:[['11','12']],down:r=>{r.p=r.p?0:1},
+ draw:(c,r)=>R(0,24,70,66,'#f1c40f','#a8870a',5)+`<g transform="rotate(${r.p?-35:0} 35 24)"><rect x="33" y="-6" width="4" height="30" fill="#555"/><circle cx="35" cy="-6" r="6" fill="#222"/></g>`+R(10,40,50,22,'#2b2f34','none',3)+Tx(35,55,r.p?'TÁC ĐỘNG':'NGHỈ',7,'#fff','middle',600)+
+  Tx(35,74,'11',7,'#3a2e00')+Tx(18,84,'12',7,'#3a2e00')+Tx(52,84,'14',7,'#3a2e00')+tag(c.label,-6,40)});
+def('vmeter',{name:'Đồng hồ vôn',cat:'do',pre:'P',w:80,h:80,dark:1,terms:[T('a',25,80),T('b',55,80)],
+ post:(c,r,X)=>{r.v=X.V(c.id,'a','b')},
+ draw:(c,r)=>{const v=r.v||{v:0,k:''};return R(0,0,80,80,'#1c1f23','#3e434a',6)+R(8,14,64,30,'#0f2a12','#244d2a',3)+Tx(64,36,v.v+' V'+(v.k==='AC'?'~':v.k==='DC'?'⎓':''),13,'#7CFC9A','end',600)+Tx(40,60,'VOLTMETER',6,'#888')+Tx(25,74,'V',7,'#aaa')+Tx(55,74,'COM',6,'#aaa')+tag(c.label,40,-10)}});
+
+// ---------- bổ sung: nguồn ----------
+def('xfmr',{name:'Biến áp điều khiển 400/230V',cat:'nguon',pre:'T',w:100,h:110,prot:0,
+ terms:[T('P1',25,0),T('P2',75,0),T('S1',25,110),T('S2',75,110)],
+ src:(c,r)=>r.on&&!r.trip?{S1:'T1',S2:'T0'}:{},closed:r=>!r.trip,trip:r=>{r.trip=1},ia:1,down:r=>{r.trip=0},
+ update:(c,r,X)=>{const v=X.V(c.id,'P1','P2');const on=v.k==='AC'&&v.v===+c.params.vp;const ch=on!==!!r.on;r.on=on;return ch},
+ params:{vp:'400'},pdef:[['vp','Điện áp sơ cấp (V)',['400','230']]],
+ draw:(c,r)=>R(0,0,100,110,'#b9bfc6','#7d858d',5)+R(14,26,72,58,'#8a5a2b','#5c3a18',3)+[0,1,2,3,4].map(i=>`<line x1="20" y1="${33+i*11}" x2="80" y2="${33+i*11}" stroke="#c48a4a" stroke-width="3"/>`).join('')+
+  Tx(50,98,r.trip?'QUÁ TẢI, BẤM ĐỂ RESET':c.params.vp+' / 230V',7,r.trip?'#c62828':'#222','middle',600)+Tx(25,18,'P1',7)+Tx(75,18,'P2',7)+Tx(25,107,'',7)+tag(c.label,50,-10)});
+
+// ---------- phân phối ----------
+def('dist4',{name:'Cầu phân phối 4P (N L1 L2 L3)',cat:'pp',pre:'X',w:200,h:90,
+ terms:['N','L1','L2','L3'].flatMap((p,i)=>[T(p,25+i*50,0),T(p+'.1',10+i*50,90),T(p+'.2',25+i*50,90),T(p+'.3',40+i*50,90)]),
+ conns:()=>['N','L1','L2','L3'].flatMap(p=>[[p,p+'.1'],[p,p+'.2'],[p,p+'.3']]),
+ draw:c=>R(0,0,200,90,'#30343a','#555',5)+['N','L1','L2','L3'].map((p,i)=>R(4+i*50,22,42,46,['#2f80ed','#8b5a2b','#30343a','#9aa0a6'][i],'#666',3)+Tx(25+i*50,50,p,10,'#fff','middle',700)).join('')+tag(c.label,100,-10)});
+const barDef=(k,name,col,lab)=>def(k,{name,cat:'pp',pre:'X',w:130,h:34,terms:[0,1,2,3,4,5].map(i=>T(String(i+1),15+i*20,0)),
+ conns:()=>[0,1,2,3,4].map(i=>[String(i+1),String(i+2)]),draw:c=>R(0,6,130,24,col,'#555',3)+Tx(65,24,lab+'  '+c.label,9,'#fff','middle',700)});
+barDef('barN','Thanh nối N (6 lỗ)','#2f6fd0','N');barDef('barPE','Thanh nối PE (6 lỗ)','#5f8f1c','PE');
+
+// ---------- bảo vệ ----------
+const fuseDraw=n=>(c,r)=>R(0,0,n*30+10,110,'#eef0f2','#9aa3ab',4)+strip(n*30+10,2,22)+strip(n*30+10,86,22)+Array.from({length:n},(_,i)=>R(10+i*30,34,20,40,'#f7f7f2','#888',3)+R(14+i*30,46,12,16,r.trip?'#c62828':'#d6b25e','none',2)+Tx(20+i*30,17,String(1+i*2),8)+Tx(20+i*30,100,String(2+i*2),8)).join('')+(r.trip?Tx((n*30+10)/2,82,'ĐỨT',7,'#c62828','middle',700):'')+tag(c.label,(n*30+10)/2,-10);
+def('fuse1',{name:'Cầu chì 1P 10x38',cat:'bv',pre:'F',w:40,h:110,prot:1,ia:1,terms:[T('1',20,0),T('2',20,110)],
+ conns:(c,r)=>r.trip?[]:[['1','2']],closed:r=>!r.trip,trip:r=>{r.trip=1},down:r=>{r.trip=0},draw:fuseDraw(1)});
+def('fuse3',{name:'Cầu chì 3P 10x38',cat:'bv',pre:'F',w:100,h:110,prot:2,ia:1,terms:[T('1',20,0),T('3',50,0),T('5',80,0),T('2',20,110),T('4',50,110),T('6',80,110)],
+ conns:(c,r)=>r.trip?[]:[['1','2'],['3','4'],['5','6']],closed:r=>!r.trip,trip:r=>{r.trip=1},down:r=>{r.trip=0},draw:fuseDraw(3)});
+def('mcb4',{name:'MCB 4 cực (3P+N)',cat:'bv',pre:'Q',w:130,h:110,prot:2,st:{on:1},ia:1,
+ terms:[T('1',20,0),T('3',50,0),T('5',80,0),T('N',110,0),T('2',20,110),T('4',50,110),T('6',80,110),T('N\'',110,110)],
+ conns:(c,r)=>mcbConns(r,[['1','2'],['3','4'],['5','6'],['N','N\'']]),closed:r=>r.on&&!r.trip,trip:r=>{r.trip=1},down:brkClick,
+ draw:(c,r)=>R(0,0,130,110,'#eef0f2','#9aa3ab',4)+strip(130,2,22)+strip(130,86,22)+lever(65,55,r.on,r.trip)+['1','3','5','N'].map((t,i)=>Tx(20+i*30,17,t,8)+Tx(20+i*30,100,['2','4','6','N'][i],8)).join('')+tag(c.label,24,40)});
+const rcDraw=(name)=>(c,r)=>R(0,0,70,110,'#eef0f2','#9aa3ab',4)+strip(70,2,22)+strip(70,86,22)+lever(24,55,r.on,r.trip)+R(44,40,18,12,'#f5d000','#a88f00',2)+Tx(53,49,'T',8,'#111','middle',700)+Tx(53,68,'30mA',6,'#555')+Tx(53,78,name,6,'#555')+Tx(18,17,'L',8)+Tx(52,17,'N',8)+Tx(18,100,'L',8)+Tx(52,100,'N',8)+tag(c.label,35,-10);
+def('rccb',{name:'RCCB chống giật 2P 30mA',cat:'bv',pre:'Q',w:70,h:110,prot:-1,earthOnly:1,st:{on:1},ia:1,
+ terms:[T('1',18,0),T('N',52,0),T('2',18,110),T('N\'',52,110)],conns:(c,r)=>mcbConns(r,[['1','2'],['N','N\'']]),closed:r=>r.on&&!r.trip,trip:r=>{r.trip=1},down:brkClick,draw:rcDraw('RCCB')});
+def('rcbo',{name:'RCBO chống giật + quá dòng 2P',cat:'bv',pre:'Q',w:70,h:110,prot:1,st:{on:1},ia:1,
+ terms:[T('1',18,0),T('N',52,0),T('2',18,110),T('N\'',52,110)],conns:(c,r)=>mcbConns(r,[['1','2'],['N','N\'']]),closed:r=>r.on&&!r.trip,trip:r=>{r.trip=1},down:brkClick,draw:rcDraw('RCBO')});
+def('iso3',{name:'Cầu dao cách ly xoay 3P',cat:'bv',pre:'Q',w:100,h:120,st:{on:1},ia:1,
+ terms:[T('1',20,0),T('3',50,0),T('5',80,0),T('2',20,120),T('4',50,120),T('6',80,120)],conns:(c,r)=>r.on?[['1','2'],['3','4'],['5','6']]:[],down:r=>{r.on=r.on?0:1},
+ draw:(c,r)=>R(0,0,100,120,'#f1c40f','#a8870a',5)+`<circle cx="50" cy="60" r="28" fill="#e2b007"/><g transform="rotate(${r.on?90:0} 50 60)">${R(44,34,12,52,'#c62828','#7f1d1d',4)}</g>`+Tx(18,60,'0',9,'#3a2e00','middle',700)+Tx(50,28,'I',9,'#3a2e00','middle',700)+tag(c.label,50,-10)});
+def('cos3',{name:'Cầu dao đảo 1-0-2 3P',cat:'bv',pre:'Q',w:160,h:130,ia:1,
+ terms:[T('1',50,0),T('3',80,0),T('5',110,0),T('A2',15,130),T('A4',40,130),T('A6',65,130),T('B2',95,130),T('B4',120,130),T('B6',145,130)],
+ conns:(c,r)=>r.pos===1?[['1','A2'],['3','A4'],['5','A6']]:r.pos===2?[['1','B2'],['3','B4'],['5','B6']]:[],down:r=>{r.pos=((r.pos||0)+1)%3},
+ draw:(c,r)=>R(0,0,160,130,'#eef0f2','#9aa3ab',5)+strip(160,2,22)+strip(160,106,22)+`<circle cx="80" cy="64" r="24" fill="#30343a"/><g transform="rotate(${[0,-60,60][r.pos||0]} 80 64)">${R(76,40,8,30,'#e8eaed','none',3)}</g>`+
+  Tx(40,52,'1',10,'#333','middle',700)+Tx(80,36,'0',10,'#333','middle',700)+Tx(120,52,'2',10,'#333','middle',700)+Tx(40,100,'NGÕ 1',7,'#555')+Tx(120,100,'NGÕ 2',7,'#555')+tag(c.label,80,-10)});
+def('phr',{name:'Rơ le bảo vệ pha (mất/đảo pha)',cat:'bv',pre:'F',w:90,h:110,
+ terms:[T('L1',15,0),T('L2',45,0),T('L3',75,0),T('11',15,110),T('12',45,110),T('14',75,110)],
+ conns:(c,r)=>r.ok?[['11','14']]:[['11','12']],
+ update:(c,r,X)=>{const a=X.pot(c.id,'L1'),b=X.pot(c.id,'L2'),d=X.pot(c.id,'L3');const three=[a,b,d].every(phases)&&new Set([a,b,d]).size===3;const ok=three&&dirOf(a,b,d)==='thuận';r.st=!([a,b,d].some(x=>x))?'':three?(ok?'OK':'ĐẢO PHA'):'MẤT PHA';const ch=ok!==!!r.ok;r.ok=ok;return ch},
+ draw:(c,r)=>R(0,0,90,110,'#eef0f2','#9aa3ab',5)+strip(90,2,22)+strip(90,86,22)+R(8,28,74,14,'#6d28d9','none',2)+Tx(45,38,'PHASE RELAY',7,'#fff','middle',600)+
+  `<circle cx="20" cy="56" r="4" fill="${r.ok?'#22c55e':'#203024'}"/><circle cx="20" cy="70" r="4" fill="${r.st&&!r.ok?'#ef4444':'#3a2020'}"/>`+Tx(30,59,'OK',7,'#333','start')+Tx(30,73,r.st&&!r.ok?r.st:'LỖI',7,'#333','start')+
+  Tx(15,17,'L1',7)+Tx(45,17,'L2',7)+Tx(75,17,'L3',7)+Tx(15,101,'11',7)+Tx(45,101,'12',7)+Tx(75,101,'14',7)+tag(c.label,45,-10)});
+
+// ---------- phụ kiện contactor (liên kết theo ký hiệu) ----------
+const linkedOn=(c,rt)=>{const k=P&&P.comps.find(x=>x.label===c.params.km);return!!(k&&rt&&rt[k.id]&&rt[k.id].on)};
+def('auxblk',{name:'Khối tiếp điểm phụ 1NO+1NC (gắn contactor)',cat:'kdt',pre:'KA',w:80,h:90,params:{km:''},pdef:[['km','Gắn vào contactor','link',['contactor']]],
+ terms:[T('53',20,0),T('61',60,0),T('54',20,90),T('62',60,90)],conns:(c,r,rt)=>linkedOn(c,rt)?[['53','54']]:[['61','62']],
+ draw:(c,r)=>R(0,0,80,90,'#f1f3f4','#9aa3ab',4)+strip(80,2,20)+strip(80,68,20)+Tx(40,44,'AUX',9,'#0d8a8a','middle',700)+Tx(40,57,c.params.km?'→ '+c.params.km:'chưa gắn',7,c.params.km?'#333':'#c62828')+Tx(20,16,'53',7)+Tx(60,16,'61',7)+Tx(20,82,'54',7)+Tx(60,82,'62',7)+tag(c.label,40,-10)});
+def('tmrblk',{name:'Khối timer gắn contactor (trễ đóng)',cat:'kdt',pre:'KT',w:80,h:90,params:{km:'',t:'3'},pdef:[['km','Gắn vào contactor','link',['contactor']],['t','Thời gian (s)','num']],
+ terms:[T('55',20,0),T('67',60,0),T('56',20,90),T('68',60,90)],conns:(c,r)=>r.out?[['67','68']]:[['55','56']],
+ tick:(c,r,dt,rt)=>{const on=linkedOn(c,rt);if(!on){r.el=0;if(r.out){r.out=0;return true}return false}r.el=(r.el||0)+dt;if(!r.out&&r.el>=(+c.params.t||0)){r.out=1;return true}return false},
+ draw:(c,r)=>R(0,0,80,90,'#f1f3f4','#9aa3ab',4)+strip(80,2,20)+strip(80,68,20)+`<circle cx="40" cy="42" r="11" fill="#fff" stroke="#9aa3ab"/>`+Tx(40,45,c.params.t+'s',7,'#333')+Tx(40,63,c.params.km?'→ '+c.params.km:'chưa gắn',7,c.params.km?'#333':'#c62828')+Tx(20,16,'55',7)+Tx(60,16,'67',7)+Tx(20,82,'56',7)+Tx(60,82,'68',7)+`<circle cx="70" cy="30" r="3" fill="${r.out?'#f59e0b':'#3a3426'}"/>`+tag(c.label,40,-10)});
+
+// ---------- rơ le ----------
+const smallRelay=(title,extra)=>(c,r)=>R(0,0,70,110,'#eef0f2','#9aa3ab',5)+strip(70,2,22)+strip(70,86,22)+R(6,28,58,14,'#1d4ed8','none',2)+Tx(35,38,title,6,'#fff','middle',600)+
+ `<circle cx="14" cy="54" r="3.5" fill="${r.on?'#22c55e':'#203024'}"/><circle cx="56" cy="54" r="3.5" fill="${r.out?'#f59e0b':'#3a3426'}"/>`+(extra?extra(c,r):'')+(r.burnt?Tx(35,80,'CHÁY CUỘN',6,'#c62828','middle',700):'')+tag(c.label,35,-10);
+def('impulse',{name:'Rơ le xung (impulse) 1NO',cat:'rl',pre:'K',w:70,h:110,params:coilP,pdef:coilD,
+ terms:[T('A1',15,0),T('11',55,0),T('A2',15,110),T('14',55,110)],conns:(c,r)=>r.out?[['11','14']]:[],
+ update:(c,r,X)=>{if(r.burnt)return false;const s=X.coil(c,'A1','A2',c.params.coil);if(s==='burn'){r.burnt=1;r.on=0;X.log('e',`${c.label}: cháy cuộn hút`);return true}const on=s==='on';if(on&&!r.on){r.on=1;r.out=r.out?0:1;return true}if(!on&&r.on){r.on=0}return false},
+ draw:smallRelay('IMPULSE',(c,r)=>Tx(35,72,r.out?'ĐÓNG':'MỞ',8,'#333','middle',700)+Tx(15,17,'A1',7)+Tx(55,17,'11',7)+Tx(15,101,'A2',7)+Tx(55,101,'14',7))});
+def('flasher',{name:'Rơ le nháy (flasher)',cat:'rl',pre:'K',w:70,h:110,params:{t:'0.5',coil:'230VAC'},pdef:[['t','Chu kỳ bật/tắt (s)','num'],...coilD],
+ terms:[T('A1',15,0),T('15',55,0),T('A2',15,110),T('18',55,110)],conns:(c,r)=>r.out?[['15','18']]:[],
+ update:(c,r,X)=>{const ch=coilUpd('A1','A2')(c,r,X);if(!r.on&&r.out){r.out=0;r.el=0;return true}if(r.on&&r.out===undefined){r.out=1}return ch},
+ tick:(c,r,dt)=>{if(!r.on)return false;r.el=(r.el||0)+dt;if(r.el>=Math.max(.1,+c.params.t||.5)){r.el=0;r.out=r.out?0:1;return true}return false},
+ draw:smallRelay('FLASHER',(c)=>Tx(35,72,c.params.t+' s',8,'#333','middle',700)+Tx(15,17,'A1',7)+Tx(55,17,'15',7)+Tx(15,101,'A2',7)+Tx(55,101,'18',7))});
+def('ydtimer',{name:'Timer sao - tam giác (Y/Δ)',cat:'rl',pre:'KT',w:90,h:110,params:{t:'5',coil:'230VAC'},pdef:[['t','Thời gian sao (s)','num'],...coilD],
+ terms:[T('A1',15,0),T('17',60,0),T('A2',15,110),T('18',45,110),T('28',75,110)],
+ conns:(c,r)=>r.y?[['17','18']]:r.d?[['17','28']]:[],
+ update:(c,r,X)=>{const ch=coilUpd('A1','A2')(c,r,X);if(!r.on){r.el=0;if(r.y||r.d){r.y=0;r.d=0;return true}return ch}if(!r.y&&!r.d&&!(r.el>0)){r.y=1;return true}return ch},
+ tick:(c,r,dt)=>{if(!r.on)return false;r.el=(r.el||0)+dt;const t=+c.params.t||0;let ch=false;if(r.y&&r.el>=t){r.y=0;ch=true}if(!r.d&&r.el>=t+.1){r.d=1;ch=true}return ch},
+ draw:(c,r)=>R(0,0,90,110,'#eef0f2','#9aa3ab',5)+strip(90,2,22)+strip(90,86,22)+R(6,28,78,14,'#1d4ed8','none',2)+Tx(45,38,'STAR-DELTA',7,'#fff','middle',600)+
+  `<circle cx="22" cy="56" r="4" fill="${r.y?'#f59e0b':'#3a3426'}"/><circle cx="68" cy="56" r="4" fill="${r.d?'#f59e0b':'#3a3426'}"/>`+Tx(22,72,'Y',10,'#333','middle',700)+Tx(68,72,'Δ',10,'#333','middle',700)+Tx(45,60,(r.on&&r.y?Math.max(0,(+c.params.t||0)-(r.el||0)).toFixed(1):c.params.t)+'s',7,'#333')+
+  Tx(15,17,'A1',7)+Tx(60,17,'17',7)+Tx(15,101,'A2',7)+Tx(45,101,'18',7)+Tx(75,101,'28',7)+tag(c.label,45,-10)});
+
+// ---------- thiết bị điều khiển ----------
+def('pb2',{name:'Nút nhấn kép 1NO + 1NC',cat:'dk',pre:'S',w:80,h:90,dark:1,ia:1,params:{color:'Xanh'},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng']]],
+ terms:[T('13',20,0),T('21',60,0),T('14',20,90),T('22',60,90)],conns:(c,r)=>r.p?[['13','14']]:[['21','22']],down:r=>{r.p=1},up:r=>{r.p=0},
+ draw:(c,r)=>{const col={Xanh:'#22c55e',Đỏ:'#ef4444',Vàng:'#facc15',Trắng:'#e5e7eb'}[c.params.color];return R(0,0,80,90,'#25282c','#3e434a',8)+(r.p?R(-3,-3,86,96,'none','#22d3ee',10,'stroke-width="2.5"'):'')+`<circle cx="40" cy="47" r="21" fill="#111"/><circle cx="40" cy="47" r="${r.p?15:18}" fill="${col}"/>`+Tx(8,12,'13',6,'#bbb','start')+Tx(72,12,'21',6,'#bbb','end')+Tx(8,86,'14',6,'#bbb','start')+Tx(72,86,'22',6,'#bbb','end')+tag(c.label,40,13)}});
+def('sel3',{name:'Công tắc xoay 3 vị trí 1-0-2',cat:'dk',pre:'S',w:80,h:90,dark:1,ia:1,
+ terms:[T('13',20,0),T('23',60,0),T('14',20,90),T('24',60,90)],conns:(c,r)=>r.pos===1?[['13','14']]:r.pos===2?[['23','24']]:[],down:r=>{r.pos=((r.pos||0)+1)%3},
+ draw:(c,r)=>R(0,0,80,90,'#25282c','#3e434a',8)+`<circle cx="40" cy="50" r="19" fill="#111"/><g transform="rotate(${[0,-45,45][r.pos||0]} 40 50)">${R(35,33,10,34,'#3a3f45','#555',4)}<line x1="40" y1="35" x2="40" y2="47" stroke="#fff" stroke-width="2"/></g>`+Tx(16,40,'1',8,'#bbb')+Tx(40,29,'0',8,'#bbb')+Tx(64,40,'2',8,'#bbb')+Tx(8,86,'14',6,'#bbb','start')+Tx(72,86,'24',6,'#bbb','end')+tag(c.label,40,13)});
+
+// ---------- báo hiệu / chấp hành ----------
+def('tower',{name:'Đèn tháp 3 tầng 24VDC',cat:'bh',pre:'H',w:60,h:150,dark:1,
+ terms:[T('R',12,150),T('Y',26,150),T('G',40,150),T('COM',54,150)],
+ post:(c,r,X)=>{for(const k of['R','Y','G'])r[k]=X.V(c.id,k,'COM').v===24},
+ draw:(c,r)=>[['R','#ef4444'],['Y','#facc15'],['G','#22c55e']].map(([k,col],i)=>(r[k]?R(4,8+i*36,52,34,col,'none',6,'filter="url(#glow)" opacity=".7"'):'')+R(8,10+i*36,44,30,col,'#222',4,`opacity="${r[k]?1:.25}"`)).join('')+R(14,118,32,14,'#333','none',2)+Tx(12,146,'R',6,'#aaa')+Tx(26,146,'Y',6,'#aaa')+Tx(40,146,'G',6,'#aaa')+tag(c.label,30,-10)});
+def('motor1',{name:'Động cơ 1 pha 230V (bơm)',cat:'cc',pre:'M',w:140,h:120,
+ terms:[T('L',50,0),T('N',75,0),T('PE',100,0)],
+ post:(c,r,X,dt)=>{if(r.burnt){r.run=0;return}const v=X.V(c.id,'L','N');if(v.k==='AC'&&v.v===400){r.burnt=1;X.log('e',`${c.label}: cháy động cơ (cấp 400V cho động cơ 230V)`);return}const run=v.k==='AC'&&v.v===230;if(run&&!r.run)X.log('i',`${c.label}: chạy`);r.run=run;r.msg=run?'Đang chạy':'';r.ang=((r.ang||0)+(run?900*dt:0))%360},
+ draw:(c,r)=>motorBody(c,r,140,Tx(50,26,'L',7,'#ddd')+Tx(75,26,'N',7,'#ddd')+Tx(100,26,'PE',6,'#ddd'))});
+def('motordc',{name:'Động cơ DC 24V',cat:'cc',pre:'M',w:120,h:110,
+ terms:[T('+',45,0),T('-',75,0)],
+ post:(c,r,X,dt)=>{const v=X.V(c.id,'+','-');if(v.k==='AC'&&v.v&&!r.burnt){r.burnt=1;X.log('e',`${c.label}: cháy động cơ DC (cấp điện AC)`)}if(r.burnt){r.run=0;return}const run=v.k==='DC'&&Math.abs(v.v)===24;r.run=run;r.dir=v.v<0?-1:1;r.msg=run?(r.dir>0?'Quay thuận':'Quay ngược'):'';r.ang=((r.ang||0)+(run?r.dir*900*dt:0))%360},
+ draw:(c,r)=>motorBody(c,r,120,Tx(45,26,'+',8,'#ddd')+Tx(75,26,'−',8,'#ddd'))});
+def('fan',{name:'Quạt thông gió 230V',cat:'cc',pre:'E',w:90,h:100,dark:1,
+ terms:[T('L',30,0),T('N',60,0)],
+ post:(c,r,X,dt)=>{r.run=X.coil(c,'L','N','230VAC')==='on';r.ang=((r.ang||0)+(r.run?1400*dt:0))%360},
+ draw:(c,r)=>R(0,0,90,100,'#2b2f34','#555',6)+`<circle cx="45" cy="52" r="34" fill="#15171a" stroke="#555"/><g transform="rotate(${r.ang||0} 45 52)">${[0,90,180,270].map(a=>`<ellipse cx="45" cy="34" rx="7" ry="16" fill="${r.run?'#7dd3fc':'#9aa0a6'}" transform="rotate(${a} 45 52)"/>`).join('')}</g><circle cx="45" cy="52" r="6" fill="#444"/>`+Tx(30,12,'L',6,'#aaa')+Tx(60,12,'N',6,'#aaa')+tag(c.label,45,-10)});
+def('heater',{name:'Điện trở sưởi 230V',cat:'cc',pre:'E',w:90,h:80,
+ terms:[T('L',25,0),T('N',65,0)],post:(c,r,X)=>{r.on=X.coil(c,'L','N','230VAC')==='on'},
+ draw:(c,r)=>R(0,0,90,80,'#9aa0a6','#555',5)+`<path d="M10 45 l8 -12 l8 24 l8 -24 l8 24 l8 -24 l8 24 l8 -24 l8 12" fill="none" stroke="${r.on?'#ff6b1a':'#444'}" stroke-width="4" ${r.on?'filter="url(#glow)"':''}/><path d="M10 45 l8 -12 l8 24 l8 -24 l8 24 l8 -24 l8 24 l8 -24 l8 12" fill="none" stroke="${r.on?'#ffb36b':'#555'}" stroke-width="2.5"/>`+Tx(45,74,r.on?'ĐANG SƯỞI':'',7,'#7c2d12','middle',700)+tag(c.label,45,-10)});
+def('valve',{name:'Van điện từ',cat:'cc',pre:'Y',w:80,h:100,params:{coil:'24VDC'},pdef:coilD,
+ terms:[T('A1',25,0),T('A2',55,0)],
+ post:(c,r,X)=>{if(r.burnt){r.lit=0;return}const s=X.coil(c,'A1','A2',c.params.coil);if(s==='burn'){r.burnt=1;X.log('e',`${c.label}: cháy cuộn van`)}r.lit=s==='on'},
+ draw:(c,r)=>R(18,10,44,40,'#1f2937','#555',4)+Tx(40,34,c.params.coil,6,'#ddd')+R(36,50,8,12,'#777')+R(6,62,68,26,'#b08d57','#6b5534',4)+R(0,68,8,14,'#888')+R(72,68,8,14,'#888')+`<circle cx="40" cy="75" r="7" fill="${r.lit?'#38bdf8':'#334'}"/>`+Tx(40,98,r.burnt?'CHÁY':r.lit?'MỞ':'ĐÓNG',7,r.burnt?'#c62828':'#ddd','middle',700)+tag(c.label,40,-10)});
+
+// ---------- cảm biến ----------
+const swCO=(k,name,pre,on,off,col)=>def(k,{name,cat:'cb',pre,w:70,h:90,ia:1,terms:[T('11',35,0),T('12',18,90),T('14',52,90)],conns:(c,r)=>r.p?[['11','14']]:[['11','12']],down:r=>{r.p=r.p?0:1},
+ draw:(c,r)=>R(0,0,70,90,col,'#555',6)+R(8,26,54,24,'#1f2937','none',3)+Tx(35,42,r.p?on:off,7,r.p?'#fbbf24':'#ddd','middle',700)+Tx(35,16,'11',7,'#222')+Tx(18,84,'12',7,'#222')+Tx(52,84,'14',7,'#222')+Tx(35,64,'bấm để đổi',6,'#333')+tag(c.label,35,-10)});
+swCO('float','Công tắc phao 1CO','B','NƯỚC CAO','NƯỚC THẤP','#93c5fd');
+swCO('thermo','Thermostat 1CO','B','NÓNG','NGUỘI','#fca5a5');
+swCO('press','Công tắc áp suất 1CO','B','ĐỦ ÁP','THIẾU ÁP','#d4d4d8');
+const proxDef=(k,name,typ)=>def(k,{name,cat:'cb',pre:'B',w:60,h:110,ia:1,
+ terms:[T('BN',12,110),T('BU',30,110),T('BK',48,110)],
+ src:(c,r)=>r.pw&&r.p?{BK:typ==='PNP'?'+24':'0V'}:{},
+ update:(c,r,X)=>{const pw=X.V(c.id,'BN','BU').v===24;const ch=pw!==!!r.pw;r.pw=pw;return ch},down:r=>{r.p=r.p?0:1},
+ draw:(c,r)=>(r.p?R(8,-28,44,16,'#64748b','#334155',3)+Tx(30,-17,'VẬT',7,'#fff','middle',700):'')+R(14,0,32,70,'#9ca3af','#555',4)+R(14,0,32,10,'#1d4ed8','none',2)+`<circle cx="30" cy="22" r="4" fill="${r.pw&&r.p?'#f59e0b':r.pw?'#22c55e':'#333'}"/>`+Tx(30,48,typ,7,'#111','middle',700)+
+  `<path d="M30 70 V90" stroke="#333" stroke-width="5"/>`+R(4,90,52,20,'#2b2f34','none',3)+Tx(12,104,'BN',6,'#c08a5a')+Tx(30,104,'BU',6,'#60a5fa')+Tx(48,104,'BK',6,'#ddd')+tag(c.label,30,-40)});
+proxDef('proxpnp','Cảm biến tiệm cận PNP (3 dây)','PNP');proxDef('proxnpn','Cảm biến tiệm cận NPN (3 dây)','NPN');
+
+// ---------- đo lường ----------
+def('hourm',{name:'Đồng hồ đếm giờ chạy',cat:'do',pre:'P',w:80,h:70,dark:1,params:{coil:'230VAC'},pdef:coilD,terms:[T('A1',25,70),T('A2',55,70)],
+ post:(c,r,X,dt)=>{if(X.coil(c,'A1','A2',c.params.coil)==='on'){r.on=1;r.s=(r.s||0)+dt}else r.on=0},
+ draw:(c,r)=>{const s=Math.floor(r.s||0);return R(0,0,80,70,'#1c1f23','#3e434a',6)+R(8,14,64,26,'#111','#444',3)+Tx(66,32,`${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor(s/60)%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`,11,'#fafafa','end',600)+`<circle cx="14" cy="52" r="3" fill="${r.on?'#22c55e':'#333'}"/>`+Tx(44,55,'HOUR METER',6,'#888')+tag(c.label,40,-10)}});
+def('phseq',{name:'Chỉ thị thứ tự pha',cat:'do',pre:'P',w:90,h:80,dark:1,terms:[T('L1',20,80),T('L2',45,80),T('L3',70,80)],
+ post:(c,r,X)=>{const p=['L1','L2','L3'].map(t=>X.pot(c.id,t));r.p=p.map(phases);r.seq=p.every(phases)&&new Set(p).size===3?dirOf(...p):''},
+ draw:(c,r)=>R(0,0,90,80,'#1c1f23','#3e434a',6)+[0,1,2].map(i=>`<circle cx="${20+i*25}" cy="22" r="7" fill="${r.p&&r.p[i]?'#ef4444':'#3a2020'}"/>`+Tx(20+i*25,40,'L'+(i+1),7,'#aaa')).join('')+Tx(45,60,r.seq==='thuận'?'↻ ĐÚNG':r.seq?'↺ NGƯỢC':'—',9,r.seq==='thuận'?'#22c55e':r.seq?'#f59e0b':'#666','middle',700)+tag(c.label,45,-10)});
+
+// ---------- biến tần ----------
+def('vfd',{name:'Biến tần 3P 400V',cat:'dc',pre:'U',w:170,h:170,dark:1,params:{f:'50',ramp:'3'},pdef:[['f','Tần số đặt (Hz)','num'],['ramp','Thời gian tăng/giảm tốc (s)','num']],
+ terms:[T('L1',20,0),T('L2',40,0),T('L3',60,0),T('PE',85,0),T('RA',125,0),T('RC',150,0),T('U',20,170),T('V',40,170),T('W',60,170),T('DI1',90,170),T('DI2',110,170),T('+24',132,170),T('COM',154,170)],
+ src:(c,r)=>{const o={};if(r.pw){o['+24']='+24';o.COM='0V'}if(r.pw&&r.f>0){Object.assign(o,r.dir<0?{U:'L1',V:'L3',W:'L2'}:{U:'L1',V:'L2',W:'L3'})}return o},
+ conns:(c,r)=>r.f>0?[['RA','RC']]:[],
+ update:(c,r,X)=>{const p=['L1','L2','L3'].map(t=>X.pot(c.id,t));const pw=p.every(phases)&&new Set(p).size===3;const f1=pw&&X.V(c.id,'DI1','COM').v===24,f2=pw&&X.V(c.id,'DI2','COM').v===24;const cmd=f1&&!f2?1:f2&&!f1?-1:0;const ch=pw!==!!r.pw;r.pw=pw;r.cmd=cmd;if(!pw&&r.f>0){r.f=0;return true}return ch},
+ tick:(c,r,dt)=>{const was=r.f>0;const fs=Math.max(0,+c.params.f||0),rate=fs/Math.max(.1,+c.params.ramp||3);r.f=r.f||0;r.dir=r.dir||1;
+  if(r.cmd&&r.cmd!==r.dir){r.f=Math.max(0,r.f-rate*dt);if(r.f===0)r.dir=r.cmd}else if(r.cmd){r.f=Math.min(fs,r.f+rate*dt)}else r.f=Math.max(0,r.f-rate*dt);return was!==(r.f>0)},
+ draw:(c,r)=>R(0,0,170,170,'#2b2f34','#555',8)+R(14,26,90,40,'#0b1f17','#14532d',4)+Tx(98,52,(r.f||0).toFixed(1)+' Hz',14,'#4ade80','end',600)+Tx(20,78,r.pw?(r.f>0?(r.dir<0?'CHẠY NGƯỢC':'CHẠY THUẬN'):'SẴN SÀNG'):'MẤT NGUỒN',8,r.pw?'#ddd':'#ef4444','start',600)+
+  R(116,30,40,40,'#3a3f45','none',20)+`<circle cx="136" cy="50" r="12" fill="#555"/>`+Tx(85,104,'VFD',16,'#4b5563','middle',800)+
+  ['L1','L2','L3','PE'].map((t,i)=>Tx([20,40,60,85][i],16,t,6,'#aaa')).join('')+Tx(125,16,'RA',6,'#aaa')+Tx(150,16,'RC',6,'#aaa')+['U','V','W','DI1','DI2','+24','COM'].map((t,i)=>Tx([20,40,60,90,110,132,154][i],160,t,6,'#aaa')).join('')+tag(c.label,140,92)});
+
+// ---------- PLC ----------
+const PLCCACHE=new Map();
+function plcCompile(src){
+ if(PLCCACHE.has(src))return PLCCACHE.get(src);
+ const out={st:[],err:null};const lines=String(src).split('\n');
+ try{lines.forEach((ln,li)=>{const code=ln.replace(/\/\/.*$/,'').trim();if(!code)return;
+  const tk=code.match(/[A-Za-z]+\d*|\d+(?:\.\d+)?|[()!&|=,~*+]/g)||[];let i=0;const E=m=>{throw new Error(`Dòng ${li+1}: ${m}`)};
+  const peek=()=>tk[i],eat=v=>{if(tk[i]!==v)E(`thiếu “${v}”`);i++};
+  const ID=/^(I[0-7]|Q[0-3]|M([0-9]|[12][0-9]|3[01])|T[0-7]|C[0-7])$/;
+  const fac=()=>{let t=peek();if(t===undefined)E('biểu thức chưa hết');t=t.toUpperCase();if(t==='!'||t==='~'||t==='NOT'){i++;const f=fac();return s=>!f(s)}if(t==='('){i++;const e=exp();eat(')');return e}if(t==='1'||t==='0'){i++;const v=t==='1';return()=>v}
+   if(ID.test(t)){i++;return s=>s.get(t)}E(`không hiểu “${tk[i]}”`)};
+  const term=()=>{let a=fac();while(peek()&&['&','*','AND'].includes(peek().toUpperCase())){i++;const b=fac(),x=a;a=s=>x(s)&&b(s)}return a};
+  const exp=()=>{let a=term();while(peek()&&['|','+','OR'].includes(peek().toUpperCase())){i++;const b=term(),x=a;a=s=>x(s)||b(s)}return a};
+  let mode='=';const first=(tk[0]||'').toUpperCase();if(first==='S'||first==='SET'||first==='R'||first==='RST'){mode=first[0];i++}
+  const tg=(tk[i]||'').toUpperCase();if(!/^(Q[0-3]|M([0-9]|[12][0-9]|3[01])|T[0-7]|C[0-7])$/.test(tg))E(`đích “${tk[i]||''}” không hợp lệ (Q0-Q3, M0-M31, T0-T7, C0-C7)`);i++;eat('=');
+  if(tg[0]==='T'){const fn=(tk[i]||'').toUpperCase();if(fn!=='TON'&&fn!=='TOF')E('timer phải viết T0 = TON(điều kiện, giây) hoặc TOF(...)');i++;eat('(');const e=exp();eat(',');const pt=parseFloat(tk[i]);if(isNaN(pt))E('thiếu thời gian');i++;eat(')');out.st.push({k:'T',fn,id:tg,e,pt})}
+  else if(tg[0]==='C'){const fn=(tk[i]||'').toUpperCase();if(fn!=='CTU')E('bộ đếm phải viết C0 = CTU(xung, reset, số đặt)');i++;eat('(');const e=exp();eat(',');const rs=exp();eat(',');const pv=parseInt(tk[i]);if(isNaN(pv))E('thiếu số đặt');i++;eat(')');out.st.push({k:'C',id:tg,e,rs,pv})}
+  else{const e=exp();out.st.push({k:mode,id:tg,e})}
+  if(i<tk.length)E(`thừa “${tk[i]}”`)})}catch(e){out.err=e.message}
+ PLCCACHE.set(src,out);return out}
+const PLC_DEF=`// Start = I0 (NO), Stop = I1 (NC), Rơ le nhiệt = I2 (NC)
+Q0 = (I0 | Q0) & I1 & I2
+// Q1: đèn báo lỗi khi rơ le nhiệt tác động
+Q1 = !I2`;
+def('plc',{name:'PLC mini 8DI / 4DO relay',cat:'plc',pre:'PLC',w:240,h:130,ia:1,params:{prog:PLC_DEF},pdef:[['prog','Chương trình','code']],
+ terms:[T('L+',15,0),T('M',35,0),...[0,1,2,3,4,5,6,7].map(i=>T('I'+i,65+i*22,0)),T('1L',20,130),T('Q0',45,130),T('Q1',70,130),T('2L',110,130),T('Q2',135,130),T('Q3',160,130)],
+ conns:(c,r)=>{const q=r.q||[];const o=[];if(q[0])o.push(['1L','Q0']);if(q[1])o.push(['1L','Q1']);if(q[2])o.push(['2L','Q2']);if(q[3])o.push(['2L','Q3']);return o},
+ down:r=>{r.stop=r.stop?0:1},
+ update:(c,r,X)=>{const prog=plcCompile(c.params.prog);r.err=prog.err;const pw=X.V(c.id,'L+','M').v===24;r.pw=pw;
+  const I=[0,1,2,3,4,5,6,7].map(i=>pw&&X.V(c.id,'I'+i,'M').v===24);r.i=I;const old=(r.q||[]).join();
+  r.M=r.M||{};r.T=r.T||{};r.C=r.C||{};let Q=r.Q||[0,0,0,0];
+  if(!pw||prog.err||r.stop){Q=[0,0,0,0];if(!pw){r.M={};r.T={};r.C={}}}
+  else{const s={get:n=>n[0]==='I'?I[+n.slice(1)]:n[0]==='Q'?!!Q[+n.slice(1)]:n[0]==='M'?!!r.M[n]:n[0]==='T'?!!(r.T[n]&&r.T[n].done):!!(r.C[n]&&r.C[n].done)};
+   for(const st of prog.st){const v=!!st.e(s);
+    if(st.k==='T'){const t=r.T[st.id]=r.T[st.id]||{el:0,done:false};t.in=v;t.fn=st.fn;t.pt=st.pt;if(st.fn==='TON'&&!v){t.el=0;t.done=false}if(st.fn==='TOF'&&v){t.el=0;t.done=true}}
+    else if(st.k==='C'){const t=r.C[st.id]=r.C[st.id]||{n:0,prev:false,done:false};t.in=v;t.rs=!!st.rs(s);t.pv=st.pv;if(t.rs){t.n=0;t.done=false}}
+    else{const set=x=>{if(st.id[0]==='Q')Q[+st.id.slice(1)]=x?1:0;else r.M[st.id]=x};if(st.k==='=')set(v);else if(v)set(st.k==='S')}}}
+  r.Q=Q;r.q=Q.slice();return Q.join()!==old},
+ tick:(c,r,dt)=>{let ch=false;for(const id in(r.T||{})){const t=r.T[id];if(t.fn==='TON'&&t.in&&!t.done){t.el+=dt;if(t.el>=t.pt){t.done=true;ch=true}}if(t.fn==='TOF'&&!t.in&&t.done){t.el+=dt;if(t.el>=t.pt){t.done=false;ch=true}}}
+  for(const id in(r.C||{})){const t=r.C[id];if(!t.rs&&t.in&&!t.prev){t.n++;if(!t.done&&t.n>=t.pv){t.done=true;ch=true}}t.prev=t.in}return ch},
+ draw:(c,r)=>{const I=r.i||[],Q=r.q||[];const err=r.err||plcCompile(c.params.prog).err;const st=!r.pw?'—':err?'ERR':r.stop?'STOP':'RUN';
+  return R(0,0,240,130,'#dfe3e7','#8d959c',5)+strip(240,2,24)+strip(240,104,24)+R(6,30,228,16,'#0d8a8a','none',2)+Tx(12,41,'MINI PLC  8DI / 4DO RELAY  24VDC',7,'#fff','start',600)+
+  [0,1,2,3,4,5,6,7].map(i=>`<circle cx="${65+i*22}" cy="56" r="3.5" fill="${I[i]?'#22c55e':'#2c3a30'}"/>`+Tx(65+i*22,18,'I'+i,7)).join('')+Tx(15,18,'L+',7)+Tx(35,18,'M',7)+
+  [0,1,2,3].map(i=>`<circle cx="${[45,70,135,160][i]}" cy="94" r="3.5" fill="${Q[i]?'#f59e0b':'#3a3426'}"/>`+Tx([45,70,135,160][i],122,'Q'+i,7)).join('')+Tx(20,122,'1L',7)+Tx(110,122,'2L',7)+
+  R(186,62,46,22,'#111','none',3)+Tx(209,77,st,9,st==='RUN'?'#4ade80':st==='ERR'?'#f87171':'#fbbf24','middle',700)+Tx(12,78,'bấm khi chạy: RUN/STOP',6,'#555','start')+tag(c.label,209,96)}});
+
+// ---------- quá trình: bồn nước ----------
+def('tank',{name:'Bồn nước có 2 phao',cat:'qt',pre:'TK',w:140,h:190,ia:1,st:{lv:15,dr:1},
+ params:{pump:'',low:'20',high:'90',fill:'8',drain:'3'},pdef:[['pump','Bơm / van cấp nước','link',['motor1','motor3','motor6','motordc','valve']],['low','Phao thấp (%)','num'],['high','Phao cao (%)','num'],['fill','Tốc độ cấp (%/s)','num'],['drain','Tốc độ xả (%/s)','num']],
+ terms:[T('L1',20,0),T('L2',45,0),T('H1',95,0),T('H2',120,0)],
+ conns:(c,r)=>{const o=[];if(r.lv<=+c.params.low)o.push(['L1','L2']);if(r.lv<+c.params.high)o.push(['H1','H2']);return o},
+ down:r=>{r.dr=r.dr?0:1},
+ post:(c,r,X,dt)=>{const pc=P.comps.find(x=>x.label===c.params.pump);const pr=pc&&sim.rt[pc.id];const run=!!(pr&&(pr.run||pr.lit));
+  const before=[r.lv<=+c.params.low,r.lv<+c.params.high].join();r.lv=Math.max(0,Math.min(100,r.lv+((run?+c.params.fill:0)-(r.dr?+c.params.drain:0))*dt));r.fill=run;
+  if([r.lv<=+c.params.low,r.lv<+c.params.high].join()!==before){X.dirty();X.log('i',`${c.label}: mức nước ${r.lv.toFixed(0)}%`)}},
+ draw:(c,r)=>{const lv=r.lv==null?15:r.lv,lo=+c.params.low,hi=+c.params.high;const y=v=>170-v*1.3;
+  return R(0,0,140,190,'#1e293b','#475569',6)+Tx(70,22,'BỒN NƯỚC',8,'#cbd5e1','middle',700)+R(16,40,108,130,'#0f172a','#64748b',3)+R(17,y(lv),106,170-y(lv),'#2563eb','none',0,'opacity=".85"')+
+  `<line x1="16" y1="${y(lo)}" x2="124" y2="${y(lo)}" stroke="#fbbf24" stroke-dasharray="3 3"/><line x1="16" y1="${y(hi)}" x2="124" y2="${y(hi)}" stroke="#f87171" stroke-dasharray="3 3"/>`+
+  Tx(120,y(lo)-3,'thấp',6,'#fbbf24','end')+Tx(120,y(hi)-3,'cao',6,'#f87171','end')+Tx(70,110,lv.toFixed(0)+'%',16,'#fff','middle',700)+
+  (r.fill?Tx(70,128,'đang cấp nước',7,'#93c5fd'):'')+R(124,160,16,8,r.dr?'#38bdf8':'#475569')+Tx(132,184,r.dr?'xả: mở':'xả: đóng',6,'#cbd5e1','end')+
+  Tx(32,12,'L1  L2 (thấp)',6,'#cbd5e1')+Tx(108,12,'H1  H2 (cao)',6,'#cbd5e1')+tag(c.label,30,30)}});
+
+// ====================== state ======================
+const LS='panelsim_projects_v1';
+let projects=[];try{projects=JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){projects=[]}
+const persist=()=>{try{localStorage.setItem(LS,JSON.stringify(projects))}catch(e){}};
+let P=null; // current project {id,name,updated,comps,wires,ex?}
+let view={x:0,y:0,k:1},sel=null,pending=null,drag=null,locked=false,wcol='xám',undoS=[],redoS=[],sim=null,palOpen=false;
+const comp=id=>P.comps.find(c=>c.id===id);
+const rot=(c,dx,dy)=>{let n=((c.rot||0)/90)%4;while(n-->0){[dx,dy]=[-dy,dx]}return[dx,dy]};
+const tpos=(c,t)=>{const ty=TY[c.type],d=ty.terms.find(x=>x.id===t);if(!d)return[c.x,c.y];const[dx,dy]=rot(c,d.x-ty.w/2,d.y-ty.h/2);return[c.x+ty.w/2+dx,c.y+ty.h/2+dy]};
+const tside=(c,t)=>{const ty=TY[c.type],d=ty.terms.find(x=>x.id===t);if(!d)return[0,1];return rot(c,...(d.y<=0?[0,-1]:d.y>=ty.h?[0,1]:d.x<=0?[-1,0]:[1,0]))};
+const bbox=c=>{const ty=TY[c.type];const q=(c.rot||0)%180?[ty.h,ty.w]:[ty.w,ty.h];return[c.x+ty.w/2-q[0]/2,c.y+ty.h/2-q[1]/2,q[0],q[1]]};
+
+function save(){if(!P)return;P.updated=Date.now();if(P.ex){P.ex=0;P.id=uid();P.name=P.name+' (bản sao)';$('#pname').value=P.name;projects.unshift(P)}persist()}
+function snapUndo(){undoS.push(JSON.stringify({c:P.comps,w:P.wires}));if(undoS.length>100)undoS.shift();redoS=[]}
+function undo(){if(!undoS.length)return;redoS.push(JSON.stringify({c:P.comps,w:P.wires}));const s=JSON.parse(undoS.pop());P.comps=s.c;P.wires=s.w;sel=null;save();render()}
+function redo(){if(!redoS.length)return;undoS.push(JSON.stringify({c:P.comps,w:P.wires}));const s=JSON.parse(redoS.pop());P.comps=s.c;P.wires=s.w;sel=null;save();render()}
+function nextLabel(pre){let n=1;const used=new Set(P.comps.map(c=>c.label));while(used.has('-'+pre+n))n++;return'-'+pre+n}
+function addComp(type,x,y,label,params){const ty=TY[type];const c={id:uid(),type,x:snap(x),y:snap(y),label:label||nextLabel(ty.pre),params:Object.assign({},ty.params,params||{}),st:Object.assign({},ty.st||{})};P.comps.push(c);return c}
+
+// ====================== simulation engine ======================
+function buildNets(rt){
+ const par={};const f=k=>{while(par[k]!==k){par[k]=par[par[k]];k=par[k]}return k};const key=(c,t)=>c+':'+t;
+ for(const c of P.comps)for(const t of TY[c.type].terms)par[key(c.id,t.id)]=key(c.id,t.id);
+ const un=(a,b)=>{if(par[a]===undefined||par[b]===undefined)return;const x=f(a),y=f(b);if(x!==y)par[x]=y};
+ for(const w of P.wires)un(key(w.a.c,w.a.t),key(w.b.c,w.b.t));
+ for(const c of P.comps)for(const[a,b]of TY[c.type].conns(c,rt[c.id]||{},rt))un(key(c.id,a),key(c.id,b));
+ const net={},pots={};for(const k in par){net[k]=f(k)}
+ for(const c of P.comps){const s=TY[c.type].src;if(!s)continue;const m=s(c,rt[c.id]||{},rt);for(const t in m){const n=net[key(c.id,t)];(pots[n]=pots[n]||new Set()).add(m[t])}}
+ return{net,pots}}
+const isShort=s=>{if(!s)return false;const ph=[...s].filter(phases);const hot=ph.length+(s.has('T1')?1:0);if(hot>1)return true;const g=s.has('N')||s.has('PE');if(ph.length&&(g||s.has('0V')||s.has('+24')||s.has('T0')))return true;if(s.has('T1')&&(s.has('T0')||s.has('0V')||s.has('+24')))return true;if(s.has('+24')&&(s.has('0V')||g||s.has('T0')))return true;return false};
+const hasPE=s=>s&&s.has('PE');
+const shorts=N=>Object.keys(N.pots).filter(n=>isShort(N.pots[n]));
+const mainPot=s=>{if(!s||!s.size)return null;for(const p of['L1','L2','L3','T1','+24','N','T0','PE','0V'])if(s.has(p))return p;return null};
+function makeX(N,rt){
+ const pot=(cid,t)=>mainPot(N.pots[N.net[cid+':'+t]]);
+ const V=(cid,a,b)=>{const sa=N.pots[N.net[cid+':'+a]]||new Set(),sb=N.pots[N.net[cid+':'+b]]||new Set();const pa=mainPot(sa),pb=mainPot(sb);
+  if(phases(pa)&&phases(pb))return pa===pb?{v:0,k:'AC'}:{v:400,k:'AC'};
+  if(phases(pa)&&(sb.has('N')||sb.has('PE'))||phases(pb)&&(sa.has('N')||sa.has('PE')))return{v:230,k:'AC'};
+  if(sa.has('T1')&&sb.has('T0')||sb.has('T1')&&sa.has('T0'))return{v:230,k:'AC'};
+  if(sa.has('+24')&&sb.has('0V'))return{v:24,k:'DC'};if(sb.has('+24')&&sa.has('0V'))return{v:-24,k:'DC'};return{v:0,k:''}};
+ return{pot,V,net:(cid,t)=>N.net[cid+':'+t],
+  coil:(c,a,b,spec)=>{const v=V(c.id,a,b);if(spec==='24VDC'){if(v.k==='AC'&&v.v)return'burn';return Math.abs(v.v)===24?'on':'off'}if(v.k==='AC'&&v.v===230)return'on';if(v.k==='AC'&&v.v===400)return'burn';return'off'},
+  log:(t,m)=>simLog(t,m),dirty:()=>{sim.dirty=1},
+  vfdFor:mc=>{const ins=TY[mc.type].terms.map(t=>N.net[mc.id+':'+t.id]);for(const c of P.comps){if(c.type!=='vfd')continue;if(['U','V','W'].some(t=>ins.includes(N.net[c.id+':'+t])))return rt[c.id].f||0}return null},
+  olFor:mc=>{for(const c of P.comps){if(c.type!=='ol'||rt[c.id].trip)continue;const outs=['2','4','6'].map(t=>N.net[c.id+':'+t]);const ins=TY[mc.type].terms.map(t=>N.net[mc.id+':'+t.id]);if(outs.some(o=>ins.includes(o)))return{c,r:rt[c.id]}}return null}}}
+function solve(){
+ const rt=sim.rt;let N,i;
+ for(i=0;i<40;i++){
+  N=buildNets(rt);const sh=shorts(N);
+  if(sh.length){
+   const earth=sh.some(n=>hasPE(N.pots[n]));const cands=P.comps.filter(c=>TY[c.type].prot!==undefined&&TY[c.type].closed(rt[c.id])&&(!TY[c.type].earthOnly||earth)).sort((a,b)=>TY[a.type].prot-TY[b.type].prot);
+   let done=null;
+   for(const c of cands){const save=JSON.stringify(rt[c.id]);TY[c.type].trip(rt[c.id]);if(shorts(buildNets(rt)).length<sh.length){done=c;break}rt[c.id]=JSON.parse(save)}
+   if(done){simLog('e',`${done.label} tác động: ${TY[done.type].earthOnly?'DÒNG RÒ / CHẠM VỎ':earth&&/^rc/.test(done.type)?'CHẠM ĐẤT':'NGẮN MẠCH'}`);continue}
+   sim.fault=sh;simLog('e','Ngắn mạch không có thiết bị bảo vệ ngắt được. Mô phỏng dừng lại, kiểm tra các dây màu đỏ.');sim.paused=1;sim.N=N;return}
+  const X=makeX(N,rt);let ch=false;
+  for(const c of P.comps){const u=TY[c.type].update;if(u&&u(c,rt[c.id],X))ch=true}
+  if(!ch)break}
+ if(i>=40&&!sim.osc){sim.osc=1;simLog('w','Mạch dao động (rơ le đóng/cắt liên tục). Kiểm tra mạch tự giữ / khóa chéo.')}
+ sim.N=N;sim.fault=null}
+function tick(dt){
+ if(!sim||sim.paused)return;const rt=sim.rt;let ch=false;
+ for(const c of P.comps){const t=TY[c.type].tick;if(t&&t(c,rt[c.id],dt,rt))ch=true}
+ solve();if(sim.paused){render();return}
+ const X=makeX(sim.N,rt);sim.dirty=0;
+ for(const c of P.comps){const p=TY[c.type].post;if(p)p(c,rt[c.id],X,dt)}
+ if(sim.dirty)solve();
+ sim.t+=dt;render()}
+let timer=null;
+function startSim(){
+ const rt={};for(const c of P.comps)rt[c.id]=JSON.parse(JSON.stringify(c.st||{}));
+ sim={rt,t:0,paused:0,log:[],N:null};sel=null;pending=null;$('#log').innerHTML='';
+ if(!P.comps.some(c=>TY[c.type].src&&c.type!=='psu'))simLog('w','Chưa có nguồn điện. Thêm “Nguồn 3 pha” hoặc “Nguồn 1 pha”.');
+ solve();timer=setInterval(()=>tick(.05),50);ui();render()}
+function stopSim(){clearInterval(timer);timer=null;sim=null;$('#log').innerHTML='';ui();render()}
+function simLog(t,m){if(!sim)return;const last=sim.log[sim.log.length-1];if(last&&last.m===m)return;sim.log.push({t,m,at:sim.t});const el=document.createElement('div');el.className='msg '+(t==='e'?'e':t==='w'?'w':'');el.innerHTML=`<small>${sim.t.toFixed(1)} s</small>${esc(m)}`;const L=$('#log');L.appendChild(el);while(L.children.length>6)L.firstChild.remove();L.scrollTop=1e6}
+
+// ====================== rendering ======================
+const POTC={L1:'#ff8a3d',L2:'#ff8a3d',L3:'#ff8a3d',N:'#4fc3f7','+24':'#ff5252','0V':'#7c8cff',PE:'#c6e34a'};
+function route(w){
+ const a=comp(w.a.c),b=comp(w.b.c);if(!a||!b)return'';
+ const p1=tpos(a,w.a.t),p2=tpos(b,w.b.t),d1=tside(a,w.a.t),d2=tside(b,w.b.t);
+ const s1=[p1[0]+d1[0]*14,p1[1]+d1[1]*14],s2=[p2[0]+d2[0]*14,p2[1]+d2[1]*14];
+ let pts=[p1,s1];
+ if(w.pts&&w.pts.length){let q=s1;for(const p of w.pts){pts.push([p[0],q[1]],p);q=p}pts.push([s2[0],q[1]])}
+ else if(d1[0]&&d2[0]){let mx=d1[0]>0&&d2[0]>0?Math.max(s1[0],s2[0]):d1[0]<0&&d2[0]<0?Math.min(s1[0],s2[0]):(s1[0]+s2[0])/2;pts.push([mx,s1[1]],[mx,s2[1]])}
+ else if(d1[0])pts.push([s2[0],s1[1]]);else if(d2[0])pts.push([s1[0],s2[1]]);
+ else{let my;if(d1[1]<0&&d2[1]<0)my=Math.min(s1[1],s2[1]);else if(d1[1]>0&&d2[1]>0)my=Math.max(s1[1],s2[1]);else my=(s1[1]+s2[1])/2;pts.push([s1[0],my],[s2[0],my])}
+ pts.push(s2,p2);return'M'+pts.map(p=>p.join(' ')).join(' L')}
+function render(){
+ if(!P)return;const W=$('#world');W.setAttribute('transform',`translate(${view.x} ${view.y}) scale(${view.k})`);
+ $('#bgr').setAttribute('fill','url(#dots)');$('#dots').setAttribute('patternTransform',`translate(${view.x} ${view.y}) scale(${view.k})`);
+ const rt=sim?sim.rt:{};const N=sim&&sim.N;const fault=new Set(sim&&sim.fault||[]);
+ let h='';
+ for(const c of P.comps){const ty=TY[c.type];const r=sim?rt[c.id]:Object.assign({},c.st);
+  h+=`<g data-c="${c.id}" transform="translate(${c.x} ${c.y})${c.rot?` rotate(${c.rot} ${ty.w/2} ${ty.h/2})`:''}" class="${sim&&ty.ia?'ia':''}" style="cursor:${sim?(ty.ia?'pointer':'default'):'move'}">${ty.draw(c,r)}${sel&&sel.c===c.id?R(-6,-6,ty.w+12,ty.h+12,'none','#22d3ee',8,'stroke-width="2" stroke-dasharray="5 4"'):''}</g>`}
+ for(const w of P.wires){const d=route(w);if(!d)continue;let col=WCOL[w.color]||WCOL.xám,flow='';
+  if(N){const n=N.net[w.a.c+':'+w.a.t];const s=N.pots[n];const mp=mainPot(s);if(fault.has(n)){col='#ff1744'}else if(mp){flow=POTC[mp]}}
+  const S=sel&&sel.w===w.id;
+  h+=`<g data-w="${w.id}"><path d="${d}" class="wire" stroke="transparent" stroke-width="12"/>`+(S?`<path d="${d}" class="wire" stroke="#22d3ee" stroke-width="6" opacity=".6"/>`:'')+
+   `<path d="${d}" class="wire" stroke="#0008" stroke-width="5"/><path d="${d}" class="wire" stroke="${flow?flow:col}" stroke-width="3"/>`+(flow?`<path d="${d}" class="flow" stroke="#fff8" stroke-width="1.6"/>`:'')+`</g>`}
+ for(const c of P.comps)for(const t of TY[c.type].terms){const[x,y]=tpos(c,t.id);let f='#b8c0c8';if(N){const mp=mainPot(N.pots[N.net[c.id+':'+t.id]]);if(mp)f=POTC[mp]}
+  h+=`<g class="term" data-c="${c.id}" data-t="${t.id}"><circle cx="${x}" cy="${y}" r="9" fill="transparent"/><circle class="o" cx="${x}" cy="${y}" r="5.5" fill="${f}" stroke="#4b535b" stroke-width="1.2"/><path d="M${x-3} ${y}h6M${x} ${y-3}v6" stroke="#4b535b" stroke-width="1"/></g>`}
+ if(pending){const c=comp(pending.a.c);const p=tpos(c,pending.a.t);const pts=[p,...pending.pts,pending.m];let q=p,d='M'+p.join(' ');for(const x of pts.slice(1)){d+=` L${x[0]} ${q[1]} L${x[0]} ${x[1]}`;q=x}
+  h+=`<path d="${d}" class="wire" stroke="${WCOL[wcol]}" stroke-width="3" stroke-dasharray="6 4" pointer-events="none"/>`}
+ W.innerHTML=h;
+ if(!sim)ins();}
+
+// ====================== UI chrome ======================
+function ui(){
+ const b=$('#bar');const sw=Object.entries(WCOL).map(([k,v])=>`<button class="sw ${k===wcol?'on':''}" data-col="${k}" style="background:${v}" title="Dây ${k}" aria-label="Màu dây ${k}"></button>`).join('');
+ if(sim){b.innerHTML=`<button class="ibtn" id="bStop" title="Dừng mô phỏng">${ic('stop')}</button><button class="ibtn ${sim.paused?'on':''}" id="bPause" title="Tạm dừng / tiếp tục">${ic(sim.paused?'play':'pause')}</button><button class="ibtn" id="bRestart" title="Chạy lại từ đầu">${ic('reset')}</button><button class="ibtn" id="bFit" title="Vừa màn hình">${ic('fit')}</button>`;
+  $('#mode').textContent=sim.paused?'Tạm dừng':'Đang mô phỏng';$('#mode').className='chip '+(sim.paused?'pause':'run');$('#hint').textContent='Bấm nút nhấn, CB, công tắc để điều khiển. Giữ chuột trên nút nhấn để nhấn giữ.';$('#cv').classList.add('sim');$('#pal').classList.add('hide');$('#ins').classList.add('hide')}
+ else{b.innerHTML=`<button class="ibtn" id="bBack" title="Về danh sách">${ic('back')}</button><span class="sep"></span><button class="ibtn ${palOpen?'on':''}" id="bAdd" title="Thêm linh kiện">${ic('plus')}</button><button class="ibtn" id="bRun" title="Chạy mô phỏng">${ic('play')}</button><button class="ibtn" id="bFit" title="Vừa màn hình">${ic('fit')}</button><button class="ibtn ${locked?'on':''}" id="bLock" title="Khóa vị trí linh kiện">${ic(locked?'lock':'unlock')}</button><span class="sep"></span><div class="swrow">${sw}</div><span style="flex:1"></span><button class="ibtn" id="bUndo" title="Hoàn tác (Ctrl+Z)">${ic('undo')}</button><button class="ibtn" id="bRedo" title="Làm lại (Ctrl+Y)">${ic('redo')}</button>`;
+  $('#mode').textContent='Chế độ lắp ráp';$('#mode').className='chip';$('#hint').textContent=pending?'Bấm cực khác để nối, bấm nền để bẻ góc, Esc để hủy':'Bấm vào cực (chấm tròn) để bắt đầu đi dây. Kéo nền để di chuyển, cuộn để phóng to.';$('#cv').classList.remove('sim');$('#pal').classList.toggle('hide',!palOpen)}$('#ed').classList.toggle('po',palOpen&&!sim)}
+$('#bar').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+ if(t.dataset.col){wcol=t.dataset.col;if(sel&&sel.w){const w=P.wires.find(x=>x.id===sel.w);if(w){snapUndo();w.color=wcol;save()}}ui();render();return}
+ ({bBack:()=>openHome(),bAdd:()=>{palOpen=!palOpen;ui()},bRun:startSim,bStop:stopSim,bPause:()=>{sim.paused=sim.paused?0:1;if(!sim.paused&&sim.fault){stopSim();startSim();return}ui()},bRestart:()=>{stopSim();startSim()},bFit:fit,bLock:()=>{locked=!locked;ui()},bUndo:undo,bRedo:redo}[t.id]||(()=>{}))()});
+
+function ins(){
+ const I=$('#ins');if(!sel||sim){I.classList.add('hide');return}I.classList.remove('hide');if(I.contains(document.activeElement)&&I.dataset.sel===JSON.stringify(sel))return;I.dataset.sel=JSON.stringify(sel);
+ if(sel.w){const w=P.wires.find(x=>x.id===sel.w);if(!w){sel=null;I.classList.add('hide');return}
+  I.innerHTML=`<h3>Dây dẫn</h3><p class="k">${esc(comp(w.a.c).label)} : ${esc(w.a.t)} → ${esc(comp(w.b.c).label)} : ${esc(w.b.t)}</p><label>Màu dây</label><div class="swrow">${Object.entries(WCOL).map(([k,v])=>`<button class="sw ${k===w.color?'on':''}" data-wc="${k}" style="background:${v}" aria-label="${k}"></button>`).join('')}</div><div class="row">${w.pts&&w.pts.length?'<button class="btn ghost" id="iStr">Đi dây tự động</button>':''}<button class="btn danger" id="iDel">${ic('trash',16)}Xóa</button></div>`;return}
+ const c=comp(sel.c);if(!c){sel=null;I.classList.add('hide');return}const ty=TY[c.type];
+ I.innerHTML=`<h3>${esc(ty.name)}</h3><p class="k">${CATS.find(x=>x[0]===ty.cat)[1]}</p><label for="iLab">Ký hiệu</label><input id="iLab" value="${esc(c.label)}">`+
+  ty.pdef.map(([k,l,o,lt])=>`<label for="ip_${k}">${l}</label>`+(o==='num'?`<input id="ip_${k}" data-p="${k}" type="number" min="0" step="0.5" value="${esc(c.params[k])}">`
+   :o==='code'?`<textarea id="ip_${k}" data-p="${k}" spellcheck="false" rows="9">${esc(c.params[k])}</textarea><pre class="perr ${plcCompile(c.params[k]).err?'bad':''}" id="perr">${esc(plcCompile(c.params[k]).err||'✓ Chương trình hợp lệ')}</pre><details class="phelp"><summary>Cú pháp</summary><p>Mỗi dòng một lệnh, thực hiện từ trên xuống như ladder.<br><b>Q0 = (I0 | Q0) & !I1</b> — gán (| hoặc, & và, ! phủ định)<br><b>S Q1 = I2</b> / <b>R Q1 = I3</b> — set / reset<br><b>T0 = TON(I4, 5)</b> — timer trễ đóng 5 s (TOF: trễ mở)<br><b>C0 = CTU(I5, I6, 3)</b> — đếm xung I5, reset I6, đặt 3<br>Biến: I0–I7, Q0–Q3, M0–M31, T0–T7, C0–C7. Ghi chú: //</p></details>`
+   :o==='link'?`<select id="ip_${k}" data-p="${k}"><option value="">— chọn —</option>${P.comps.filter(x=>lt.includes(x.type)).map(x=>`<option ${x.label===c.params[k]?'selected':''}>${esc(x.label)}</option>`).join('')}</select>`
+   :`<select id="ip_${k}" data-p="${k}">${o.map(v=>`<option ${v===c.params[k]?'selected':''}>${v}</option>`).join('')}</select>`)).join('')+
+  `<div class="row"><button class="btn ghost" id="iRot" title="Xoay 90° (phím R)">${ic('rot',16)}Xoay</button><button class="btn ghost" id="iDup">${ic('copy',16)}Nhân bản</button><button class="btn danger" id="iDel" aria-label="Xóa">${ic('trash',16)}</button></div>`}
+$('#ins').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+ if(t.dataset.wc){const w=P.wires.find(x=>x.id===sel.w);snapUndo();w.color=t.dataset.wc;save();render();return}
+ if(t.id==='iDel')delSel();if(t.id==='iDup')dup();if(t.id==='iRot')rotSel();if(t.id==='iStr'){const w=P.wires.find(x=>x.id===sel.w);snapUndo();w.pts=[];save();render()}});
+$('#ins').addEventListener('input',e=>{if(e.target.tagName==='TEXTAREA'){const pe=$('#perr');const er=plcCompile(e.target.value).err;pe.textContent=er||'✓ Chương trình hợp lệ';pe.classList.toggle('bad',!!er)}});
+$('#ins').addEventListener('change',e=>{const c=sel&&sel.c&&comp(sel.c);if(!c)return;snapUndo();if(e.target.id==='iLab')c.label=e.target.value.trim()||c.label;else if(e.target.dataset.p)c.params[e.target.dataset.p]=e.target.value;save();render()});
+function delSel(){if(!sel)return;snapUndo();if(sel.w)P.wires=P.wires.filter(w=>w.id!==sel.w);else{P.comps=P.comps.filter(c=>c.id!==sel.c);P.wires=P.wires.filter(w=>w.a.c!==sel.c&&w.b.c!==sel.c)}sel=null;save();render()}
+function dup(){const c=comp(sel.c);if(!c)return;snapUndo();const n=addComp(c.type,c.x+40,c.y+40,null,c.params);n.rot=c.rot||0;sel={c:n.id};save();render()}
+function rotSel(){const c=sel&&sel.c&&comp(sel.c);if(!c)return;snapUndo();c.rot=((c.rot||0)+90)%360;save();render()}
+
+// palette
+function pal(){const q=$('#q').value.trim().toLowerCase();
+ $('#pl').innerHTML=CATS.map(([k,n,col])=>{const its=Object.values(TY).filter(t=>t.cat===k&&(!q||t.name.toLowerCase().includes(q)));if(!its.length)return'';
+  return`<div class="cat"><i style="background:${col}"></i>${n}<em>${its.length}</em></div>`+its.map(t=>{const s=Math.max(t.w,t.h)+30;return`<div class="it" draggable="true" data-ty="${t.k}"><svg viewBox="${-15-(s-30-t.w)/2} ${-15-(s-30-t.h)/2} ${s} ${s}">${t.draw({label:'',params:Object.assign({},t.params)},Object.assign({},t.st))}</svg>${esc(t.name)}</div>`}).join('')}).join('')||'<p class="empty">Không tìm thấy</p>'}
+$('#q').addEventListener('input',pal);
+$('#pl').addEventListener('click',e=>{const it=e.target.closest('.it');if(!it)return;const r=$('#cv').getBoundingClientRect();const ty=TY[it.dataset.ty];snapUndo();
+ const c=addComp(it.dataset.ty,(r.width/2-view.x)/view.k-ty.w/2+(Math.random()*40-20),(r.height/2-view.y)/view.k-ty.h/2);sel={c:c.id};if(innerWidth<700){palOpen=false;ui()}save();render()});
+$('#pl').addEventListener('dragstart',e=>{const it=e.target.closest('.it');if(it)e.dataTransfer.setData('text/plain',it.dataset.ty)});
+$('#cv').addEventListener('dragover',e=>e.preventDefault());
+$('#cv').addEventListener('drop',e=>{e.preventDefault();const k=e.dataTransfer.getData('text/plain');if(!TY[k]||sim)return;const[x,y]=toW(e);snapUndo();const c=addComp(k,x-TY[k].w/2,y-TY[k].h/2);sel={c:c.id};save();render()});
+
+// ====================== pointer interaction ======================
+const cv=$('#cv');
+const toW=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left-view.x)/view.k,(e.clientY-r.top-view.y)/view.k]};
+let pressed=null;
+cv.addEventListener('pointerdown',e=>{
+ const tEl=e.target.closest('[data-t]'),cEl=e.target.closest('[data-c]'),wEl=e.target.closest('[data-w]');const[x,y]=toW(e);
+ if(e.button===1||e.button===2){drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};if(e.button===2&&pending){pending=null;ui();render()}return}
+ if(sim){if(cEl&&!tEl){const c=comp(cEl.dataset.c),ty=TY[c.type];if(ty.down){ty.down(sim.rt[c.id]);pressed=c;solve();render()}return}drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};return}
+ if(tEl){const a={c:tEl.dataset.c,t:tEl.dataset.t};
+  if(!pending){pending={a,pts:[],m:[x,y],sx:e.clientX,sy:e.clientY};sel=null}
+  else if(pending.a.c===a.c&&pending.a.t===a.t){pending=null}
+  else finishWire(a);
+  ui();render();return}
+ if(pending){pending.pts.push([snap(x),snap(y)]);render();return}
+ if(cEl){sel={c:cEl.dataset.c};const c=comp(sel.c);if(!locked)drag={c,ox:x-c.x,oy:y-c.y,moved:0};render();return}
+ if(wEl){sel={w:wEl.dataset.w};wcol=P.wires.find(w=>w.id===sel.w).color;ui();render();return}
+ drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y,des:1}});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+const touches=new Map();let pinch=null;
+cv.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;touches.set(e.pointerId,[e.clientX,e.clientY]);if(touches.size===2){const[a,b]=[...touches.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),k:view.k,x:view.x,y:view.y,cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2};drag=null;pending=null;if(pressed&&sim){const ty=TY[pressed.type];if(ty.up)ty.up(sim.rt[pressed.id]);pressed=null}}},true);
+addEventListener('pointermove',e=>{if(!touches.has(e.pointerId))return;touches.set(e.pointerId,[e.clientX,e.clientY]);if(pinch&&touches.size===2){const[a,b]=[...touches.values()];const r=cv.getBoundingClientRect();const k=Math.min(3,Math.max(.2,pinch.k*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch.d));const cx=(a[0]+b[0])/2-r.left,cy=(a[1]+b[1])/2-r.top,ox=pinch.cx-r.left,oy=pinch.cy-r.top;view.k=k;view.x=cx-(ox-pinch.x)*k/pinch.k;view.y=cy-(oy-pinch.y)*k/pinch.k;render()}},true);
+const tEnd=e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null};addEventListener('pointerup',tEnd,true);addEventListener('pointercancel',tEnd,true);
+addEventListener('pointermove',e=>{
+ if(pending){pending.m=toW(e);render()}
+ if(!drag)return;
+ if(drag.pan){view.x=drag.vx+e.clientX-drag.sx;view.y=drag.vy+e.clientY-drag.sy;if(Math.abs(e.clientX-drag.sx)+Math.abs(e.clientY-drag.sy)>3)drag.des=0;render();return}
+ const[x,y]=toW(e);const nx=snap(x-drag.ox),ny=snap(y-drag.oy);if(nx!==drag.c.x||ny!==drag.c.y){if(!drag.moved){snapUndo();drag.moved=1}drag.c.x=nx;drag.c.y=ny;render()}});
+addEventListener('pointerup',e=>{
+ if(pressed){const ty=TY[pressed.type];if(ty.up&&sim){ty.up(sim.rt[pressed.id]);solve();render()}pressed=null}
+ if(pending&&!sim){const tEl=e.target.closest&&e.target.closest('[data-t]');if(tEl&&Math.abs(e.clientX-pending.sx)+Math.abs(e.clientY-pending.sy)>8){const a={c:tEl.dataset.c,t:tEl.dataset.t};if(a.c!==pending.a.c||a.t!==pending.a.t){finishWire(a);ui();render()}}}
+ if(drag){if(drag.moved)save();if(drag.des&&!sim){sel=null;render()}drag=null}});
+cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;const k=Math.min(3,Math.max(.2,view.k*Math.exp(-e.deltaY*.0015)));view.x=mx-(mx-view.x)*k/view.k;view.y=my-(my-view.y)*k/view.k;view.k=k;render()},{passive:false});
+function finishWire(b){snapUndo();P.wires.push({id:uid(),a:pending.a,b,pts:pending.pts,color:wcol});pending=null;save()}
+addEventListener('keydown',e=>{if($('#ed').classList.contains('hide')||e.target.matches('input,select'))return;
+ if(e.key==='Escape'){pending=null;sel=null;ui();render()}
+ if(sim)return;
+ if(e.key==='Delete'||e.key==='Backspace'){delSel()}
+ if(e.key.toLowerCase()==='r'&&!e.ctrlKey&&!e.metaKey&&sel&&sel.c)rotSel();
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redo():undo()}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();redo()}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='d'&&sel&&sel.c){e.preventDefault();dup()}});
+function fit(){const r=cv.getBoundingClientRect();if(!P.comps.length){view={x:r.width/2,y:r.height/2,k:1};render();return}
+ let a=1e9,b=1e9,c=-1e9,d=-1e9;for(const p of P.comps){const[x,y,w,h]=bbox(p);a=Math.min(a,x);b=Math.min(b,y-20);c=Math.max(c,x+w);d=Math.max(d,y+h)}
+ const pad=60,lw=r.width-(palOpen&&!sim?260:0),lh=r.height-48-50;const k=Math.min(1.6,Math.max(.2,Math.min((lw-pad*2)/(c-a),(lh-pad*2)/(d-b))));
+ view={k,x:(palOpen&&!sim?260:0)+(lw-(c-a)*k)/2-a*k,y:50+(lh-(d-b)*k)/2-b*k};render()}
+addEventListener('resize',()=>P&&render());
+$('#pname').addEventListener('change',e=>{P.name=e.target.value.trim()||'Không tên';save()});
+
+// ====================== examples ======================
+function W(a,ta,b,tb,color,pts){P.wires.push({id:uid(),a:{c:a.id,t:ta},b:{c:b.id,t:tb},pts:pts||[],color})}
+const EX=[
+{name:'Khởi động trực tiếp (DOL) có tự giữ',desc:'Nhấn Start (-S2): -KM1 hút và tự giữ qua tiếp điểm 13-14, động cơ chạy, đèn xanh -H1 sáng. Nhấn Stop (-S1) để dừng. Bấm vào rơ le nhiệt -F1 để thử tác động quá tải: KM1 nhả, đèn đỏ -H2 báo lỗi; bấm lần nữa để reset.',
+ build(){const m=addComp('mains3',40,20,'-X1');const q1=addComp('mcb3',60,160,'-Q1');const km=addComp('contactor',40,340,'-KM1');const f=addComp('ol',50,570,'-F1');const mo=addComp('motor3',40,760,'-M1');
+  const q2=addComp('mcb1',420,160,'-Q2',{In:'2A'});const s1=addComp('pb_nc',470,300,'-S1');const s2=addComp('pb_no',470,420,'-S2');const h1=addComp('lamp',640,480,'-H1',{color:'Xanh'});const h2=addComp('lamp',740,480,'-H2',{color:'Đỏ'});
+  W(m,'L1',q1,'1','nâu');W(m,'L2',q1,'3','đen');W(m,'L3',q1,'5','xám');W(q1,'2',km,'1','nâu');W(q1,'4',km,'3','đen');W(q1,'6',km,'5','xám');
+  W(km,'2',f,'1','nâu');W(km,'4',f,'3','đen');W(km,'6',f,'5','xám');W(f,'2',mo,'U','nâu',[[68,720]]);W(f,'4',mo,'V','đen',[[90,730]]);W(f,'6',mo,'W','xám',[[112,740]]);W(m,'PE',mo,'PE','vàngxanh',[[260,140],[260,740]]);
+  W(q1,'2',q2,'1','đỏ',[[300,300],[300,140]]);W(q2,'2',f,'95','đỏ',[[440,540]]);W(f,'96',s1,'1','đỏ',[[400,700],[400,280]]);W(f,'95',f,'97','đỏ');W(s1,'2',s2,'3','đỏ');W(s2,'4',km,'A1','đỏ',[[500,600],[340,600],[340,320]]);
+  W(km,'13',s2,'3','đỏ',[[380,320],[380,400]]);W(km,'14',s2,'4','đỏ',[[360,540],[480,540]]);W(km,'A2',m,'N','xanh',[[30,520],[20,520],[20,120],[165,120]]);
+  W(s2,'4',h1,'X1','đỏ',[[560,600],[560,460]]);W(f,'97',h2,'X1','đỏ',[[620,556],[620,440],[768,440]]);W(h1,'X2',m,'N','xanh',[[668,640],[860,640],[860,110],[165,110]]);W(h2,'X2',h1,'X2','xanh')}},
+{name:'Đảo chiều động cơ có khóa chéo',desc:'-S1 chạy thuận (-KM1), -S2 chạy ngược (-KM2, đảo L1/L3). Tiếp điểm NC 21-22 của contactor này nằm trong mạch cuộn hút của contactor kia nên không thể đóng cả hai cùng lúc. -S0 dừng.',
+ build(){const m=addComp('mains3',40,20,'-X1');const q1=addComp('mcb3',60,160,'-Q1');const k1=addComp('contactor',0,350,'-KM1');const k2=addComp('contactor',200,350,'-KM2');const f=addComp('ol',100,600,'-F1');const mo=addComp('motor3',90,790,'-M1');
+  const q2=addComp('mcb1',520,160,'-Q2',{In:'2A'});const s0=addComp('pb_nc',580,320,'-S0');const s1=addComp('pb_no',500,470,'-S1');const s2=addComp('pb_no',680,470,'-S2');
+  W(m,'L1',q1,'1','nâu');W(m,'L2',q1,'3','đen');W(m,'L3',q1,'5','xám');
+  W(q1,'2',k1,'1','nâu');W(q1,'4',k1,'3','đen');W(q1,'6',k1,'5','xám');W(q1,'2',k2,'1','nâu');W(q1,'4',k2,'3','đen');W(q1,'6',k2,'5','xám');
+  W(k1,'2',f,'1','nâu');W(k1,'4',f,'3','đen');W(k1,'6',f,'5','xám');W(k2,'2',f,'5','xám');W(k2,'4',f,'3','đen');W(k2,'6',f,'1','nâu');
+  W(f,'2',mo,'U','nâu');W(f,'4',mo,'V','đen');W(f,'6',mo,'W','xám');W(m,'PE',mo,'PE','vàngxanh',[[440,140],[440,770]]);
+  W(q1,'2',q2,'1','đỏ',[[480,300],[480,140]]);W(q2,'2',f,'95','đỏ',[[470,580],[188,580]]);W(f,'96',s0,'1','đỏ',[[460,730],[460,300]]);
+  W(s0,'2',s1,'3','đỏ');W(s0,'2',s2,'3','đỏ');W(k1,'13',s1,'3','đỏ',[[102,320],[402,320],[402,440]]);W(k1,'14',s1,'4','đỏ',[[102,520],[420,520],[420,575]]);
+  W(k2,'13',s2,'3','đỏ',[[302,330],[650,330],[650,450]]);W(k2,'14',s2,'4','đỏ',[[302,530],[660,530],[660,575]]);
+  W(s1,'4',k2,'21','đỏ',[[530,590],[344,590],[344,320]]);W(k2,'22',k1,'A1','đỏ',[[324,560],[-20,560],[-20,330]]);
+  W(s2,'4',k1,'21','đỏ',[[710,600],[140,600],[140,310]]);W(k1,'22',k2,'A1','đỏ',[[124,545],[180,545],[180,330]]);
+  W(k1,'A2',m,'N','xanh',[[-30,520],[-30,120],[165,120]]);W(k2,'A2',k1,'A2','xanh')}},
+{name:'Khởi động sao - tam giác (Y/Δ) bằng timer',desc:'Nhấn -S1: -KM1 (nguồn) và -KM2 (sao) đóng, động cơ chạy sao. Sau 5 s timer -KT1 chuyển: -KM2 nhả, -KM3 (tam giác) đóng. KM2 và KM3 khóa chéo bằng tiếp điểm NC. -S0 dừng.',
+ build(){const m=addComp('mains3',40,20,'-X1');const q1=addComp('mcb3',60,160,'-Q1');const k1=addComp('contactor',40,340,'-KM1');const f=addComp('ol',50,580,'-F1');const mo=addComp('motor6',230,900,'-M1');
+  const k3=addComp('contactor',260,580,'-KM3');const k2=addComp('contactor',460,580,'-KM2');
+  const q2=addComp('mcb1',720,160,'-Q2',{In:'2A'});const s0=addComp('pb_nc',770,320,'-S0');const s1=addComp('pb_no',770,460,'-S1');const kt=addComp('timer_on',910,600,'-KT1',{t:'5'});
+  W(m,'L1',q1,'1','nâu');W(m,'L2',q1,'3','đen');W(m,'L3',q1,'5','xám');W(q1,'2',k1,'1','nâu');W(q1,'4',k1,'3','đen');W(q1,'6',k1,'5','xám');
+  W(k1,'2',f,'1','nâu');W(k1,'4',f,'3','đen');W(k1,'6',f,'5','xám');
+  W(f,'2',mo,'U1','nâu',[[60,860]]);W(f,'4',mo,'V1','đen',[[80,870]]);W(f,'6',mo,'W1','xám',[[100,880]]);
+  W(f,'6',k3,'1','xám',[[112,760],[220,760],[220,560]]);W(f,'2',k3,'3','nâu',[[68,740],[240,740],[240,550]]);W(f,'4',k3,'5','đen',[[90,750],[250,750],[250,540]]);
+  W(k3,'2',mo,'U2','nâu');W(k3,'4',mo,'V2','đen');W(k3,'6',mo,'W2','xám');
+  W(k2,'1',mo,'U2','nâu',[[496,560],[600,560],[600,850]]);W(k2,'3',mo,'V2','đen',[[518,550],[610,550],[610,860]]);W(k2,'5',mo,'W2','xám',[[540,540],[620,540],[620,870]]);
+  W(k2,'2',k2,'4','đen');W(k2,'4',k2,'6','đen');W(m,'PE',mo,'PE','vàngxanh',[[680,140],[680,880]]);
+  W(q1,'2',q2,'1','đỏ',[[700,300],[700,140]]);W(q2,'2',f,'95','đỏ',[[660,540],[138,540]]);W(f,'96',s0,'1','đỏ',[[650,710],[650,300]]);W(s0,'2',s1,'3','đỏ');
+  W(k1,'13',s1,'3','đỏ',[[142,320],[740,320],[740,440]]);W(k1,'14',s1,'4','đỏ',[[142,520],[750,520],[750,570]]);W(s1,'4',k1,'A1','đỏ',[[800,570],[760,570],[760,310],[54,310]]);
+  W(s1,'4',kt,'A1','đỏ',[[800,580],[980,580]]);W(s1,'4',kt,'15','đỏ',[[800,575],[930,575]]);
+  W(kt,'16',k3,'21','đỏ',[[920,760],[700,760],[700,520],[384,520]]);W(k3,'22',k2,'A1','đỏ',[[384,770],[440,770],[440,560],[474,560]]);
+  W(kt,'18',k2,'21','đỏ',[[940,780],[660,780],[660,530],[584,530]]);W(k2,'22',k3,'A1','đỏ',[[584,790],[250,790],[250,570],[274,570]]);
+  W(k1,'A2',m,'N','xanh',[[20,520],[20,120],[165,120]]);W(k3,'A2',k1,'A2','xanh',[[274,800],[30,800],[30,520]]);W(k2,'A2',k3,'A2','xanh',[[474,810],[274,810]]);W(kt,'A2',k2,'A2','xanh',[[980,820],[474,820]])}},
+{name:'Khởi động / dừng động cơ bằng PLC',desc:'Nút Start -S1 vào I0, Stop -S2 (NC) vào I1, tiếp điểm 95-96 của rơ le nhiệt vào I2. Chương trình: Q0 = (I0 | Q0) & I1 & I2 điều khiển -KM1; Q1 bật đèn đỏ khi quá tải. Chọn PLC để xem và sửa chương trình.',
+ build(){const m=addComp('mains3',40,20,'-X1');const q1=addComp('mcb3',60,160,'-Q1');const km=addComp('contactor',40,340,'-KM1');const f=addComp('ol',50,580,'-F1');const mo=addComp('motor3',40,770,'-M1');
+  const q2=addComp('mcb1',360,160,'-Q2',{In:'2A'});const g=addComp('psu',460,160,'-G1');const s1=addComp('pb_no',640,220,'-S1');const s2=addComp('pb_nc',740,220,'-S2');const plc=addComp('plc',600,420,'-PLC1');const h1=addComp('lamp',900,620,'-H1',{color:'Đỏ'});
+  W(m,'L1',q1,'1','nâu');W(m,'L2',q1,'3','đen');W(m,'L3',q1,'5','xám');W(q1,'2',km,'1','nâu');W(q1,'4',km,'3','đen');W(q1,'6',km,'5','xám');
+  W(km,'2',f,'1','nâu');W(km,'4',f,'3','đen');W(km,'6',f,'5','xám');W(f,'2',mo,'U','nâu');W(f,'4',mo,'V','đen');W(f,'6',mo,'W','xám');W(m,'PE',mo,'PE','vàngxanh',[[300,140],[300,750]]);
+  W(q1,'2',q2,'1','đỏ',[[320,300],[320,140]]);W(q2,'2',g,'L','đỏ');W(m,'N',g,'N','xanh',[[440,100],[440,140],[515,140]]);
+  W(g,'+',plc,'L+','đỏ');W(g,'-',plc,'M','xanhđậm');W(g,'+',s1,'3','đỏ',[[490,200],[670,200]]);W(g,'+',s2,'1','đỏ',[[490,190],[770,190]]);
+  W(s1,'4',plc,'I0','đỏ');W(s2,'2',plc,'I1','đỏ');W(g,'+',f,'95','đỏ',[[490,300],[340,300],[340,550],[138,550]]);W(f,'96',plc,'I2','đỏ',[[560,720],[560,400],[709,400]]);
+  W(q2,'2',plc,'1L','đỏ',[[380,580],[620,580]]);W(plc,'Q0',km,'A1','đỏ',[[645,600],[20,600],[20,320],[54,320]]);W(km,'A2',m,'N','xanh',[[0,520],[0,110],[165,110]]);
+  W(plc,'Q1',h1,'X1','đỏ',[[670,610],[928,610]]);W(h1,'X2',km,'A2','xanh',[[928,740],[10,740],[10,520]])}},
+{name:'Bơm nước tự động theo phao',desc:'Mức nước xuống dưới phao thấp: -KM1 hút, bơm -M1 chạy và tự giữ qua 13-14. Nước đầy tới phao cao: mạch hở, bơm dừng. Bấm vào bồn để mở / đóng van xả, chọn bồn để chỉnh mức phao và tốc độ.',
+ build(){const m=addComp('mains1',40,20,'-X1');const q1=addComp('mcb2',60,150,'-Q1');const km=addComp('contactor',230,330,'-KM1');const mo=addComp('motor1',260,600,'-M1');const tk=addComp('tank',620,200,'-TK1',{pump:'-M1'});const h=addComp('lamp',520,380,'-H1',{color:'Xanh'});
+  W(m,'L',q1,'1','nâu');W(m,'N',q1,'3','xanh');W(q1,'2',tk,'H1','đỏ',[[78,290],[560,290],[560,170],[715,170]]);W(tk,'H2',tk,'L1','đỏ');W(tk,'L2',km,'A1','đỏ',[[665,150],[200,150],[200,310],[244,310]]);
+  W(tk,'H2',km,'13','đỏ',[[740,160],[332,160],[332,300]]);W(km,'14',km,'A1','đỏ',[[332,500],[210,500],[210,315]]);W(q1,'4',km,'A2','xanh',[[106,520],[244,520]]);
+  W(q1,'2',km,'1','nâu',[[78,300],[266,300]]);W(km,'2',mo,'L','nâu');W(q1,'4',mo,'N','xanh',[[106,560],[335,560]]);W(m,'PE',mo,'PE','vàngxanh',[[128,100],[600,100],[600,570],[360,570]]);
+  W(km,'14',h,'X1','đỏ',[[332,510],[480,510],[480,360],[548,360]]);W(h,'X2',km,'A2','xanh',[[548,540],[244,540]])}},
+{name:'Biến tần chạy thuận / ngược',desc:'Công tắc xoay -S1: vị trí 1 nối +24V vào DI1 (thuận), vị trí 2 vào DI2 (ngược). Biến tần tăng tốc lên 50 Hz trong 3 s; khi đảo chiều sẽ giảm về 0 rồi mới đổi chiều. Chọn biến tần để đổi tần số và thời gian tăng tốc.',
+ build(){const m=addComp('mains3',40,20,'-X1');const q1=addComp('mcb3',60,160,'-Q1');const u=addComp('vfd',40,340,'-U1');const mo=addComp('motor3',40,640,'-M1');const s=addComp('sel3',330,600,'-S1');const pq=addComp('phseq',300,360,'-P1');
+  W(m,'L1',q1,'1','nâu');W(m,'L2',q1,'3','đen');W(m,'L3',q1,'5','xám');W(q1,'2',u,'L1','nâu');W(q1,'4',u,'L2','đen');W(q1,'6',u,'L3','xám');W(m,'PE',u,'PE','vàngxanh');
+  W(u,'U',mo,'U','nâu');W(u,'V',mo,'V','đen');W(u,'W',mo,'W','xám');W(u,'PE',mo,'PE','vàngxanh',[[200,320],[200,620],[140,620]]);W(u,'+24',s,'13','đỏ');W(u,'+24',s,'23','đỏ');W(s,'14',u,'DI1','đỏ',[[350,720],[250,720],[250,530]]);W(s,'24',u,'DI2','đỏ',[[390,730],[260,730],[260,525]]);
+  W(u,'U',pq,'L1','nâu',[[60,560],[290,560],[290,460],[320,460]]);W(u,'V',pq,'L2','đen',[[80,570],[296,570],[296,470],[345,470]]);W(u,'W',pq,'L3','xám',[[100,580],[302,580],[302,480],[370,480]])}}];
+
+// ====================== home ======================
+let tab='p';
+const ago=t=>{const s=(Date.now()-t)/1000;return s<60?'vừa xong':s<3600?Math.floor(s/60)+' phút trước':s<86400?Math.floor(s/3600)+' giờ trước':Math.floor(s/86400)+' ngày trước'};
+function home(){const L=$('#hlist');$('#tp').classList.toggle('on',tab==='p');$('#tx').classList.toggle('on',tab==='x');$('#newp').classList.toggle('hide',tab!=='p');
+ if(tab==='x'){L.innerHTML=EX.map((x,i)=>`<div class="card" data-ex="${i}"><div class="ic">${ic('cap',18)}</div><div><b>${esc(x.name)}</b><p>${esc(x.desc)}</p></div></div>`).join('');return}
+ L.innerHTML=projects.length?projects.map(p=>`<div class="card" data-p="${p.id}"><div class="ic">${ic('file',18)}</div><div><b>${esc(p.name)}</b><p>${ago(p.updated)} · ${p.comps.length} linh kiện · ${p.wires.length} dây</p></div><div class="acts"><button class="ibtn" data-exp="${p.id}" title="Xuất JSON">${ic('dl',18)}</button><button class="ibtn" data-ren="${p.id}" title="Đổi tên">${ic('edit',18)}</button><button class="ibtn" data-del="${p.id}" title="Xóa">${ic('trash',18)}</button></div></div>`).join('')
+ :`<div class="empty"><p>Chưa có dự án nào.</p><p>Bấm <b>Dự án mới</b> để bắt đầu, hoặc mở tab <b>Ví dụ</b> để xem mạch có sẵn.</p></div>`}
+function modal(html,onOk){$('#modb').innerHTML=html;$('#mod').classList.remove('hide');const i=$('#modb input,#modb textarea');if(i){i.focus();i.select()}
+ $('#modb').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.ok){onOk(i&&i.value)}$('#mod').classList.add('hide')};
+ $('#modb').onkeydown=e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){onOk(i&&i.value);$('#mod').classList.add('hide')}if(e.key==='Escape')$('#mod').classList.add('hide')}}
+$('#hlist').addEventListener('click',e=>{const r=e.target.closest('[data-ren]'),d=e.target.closest('[data-del]'),x=e.target.closest('[data-exp]');
+ if(x){e.stopPropagation();const p=projects.find(q=>q.id===x.dataset.exp);const js=JSON.stringify({app:'panelsim',v:2,name:p.name,comps:p.comps,wires:p.wires});
+  modal(`<h3>Xuất “${esc(p.name)}”</h3><p style="color:var(--mut);margin:0 0 8px">Sao chép đoạn này, lưu thành file .json hoặc gửi cho người khác để nhập lại.</p><textarea readonly rows="8" style="width:100%;background:#0b0c0e;border:1px solid var(--line);border-radius:8px;color:#ddd;font:12px ui-monospace,monospace;padding:8px">${esc(js)}</textarea><div class="row"><button class="btn ghost">Đóng</button><button class="btn" data-copy="1">Sao chép</button></div>`,()=>{});
+  $('#modb').querySelector('[data-copy]').onclick=async ev=>{ev.stopPropagation();const b=ev.currentTarget;try{await navigator.clipboard.writeText(js);b.textContent='Đã sao chép'}catch(er){const t=$('#modb textarea');t.focus();t.select();b.textContent='Nhấn Ctrl+C'}};return}
+ if(r){e.stopPropagation();const p=projects.find(x=>x.id===r.dataset.ren);modal(`<h3>Đổi tên dự án</h3><input value="${esc(p.name)}"><div class="row"><button class="btn ghost">Hủy</button><button class="btn" data-ok="1">Lưu</button></div>`,v=>{p.name=(v||'').trim()||p.name;persist();home()});return}
+ if(d){e.stopPropagation();const p=projects.find(x=>x.id===d.dataset.del);modal(`<h3>Xóa “${esc(p.name)}”?</h3><p style="color:var(--mut)">Không thể khôi phục sau khi xóa.</p><div class="row"><button class="btn ghost">Hủy</button><button class="btn danger" data-ok="1">Xóa</button></div>`,()=>{projects=projects.filter(x=>x.id!==p.id);persist();home()});return}
+ const c=e.target.closest('.card');if(!c)return;
+ if(c.dataset.ex!==undefined){const x=EX[+c.dataset.ex];P={id:'ex',name:x.name,updated:Date.now(),comps:[],wires:[],ex:1};x.build();openEd()}
+ else{P=projects.find(p=>p.id===c.dataset.p);openEd()}});
+$('#imp').onclick=()=>modal(`<h3>Nhập dự án</h3><p style="color:var(--mut);margin:0 0 8px">Dán nội dung JSON đã xuất, hoặc chọn file .json.</p><textarea rows="8" style="width:100%;background:#0b0c0e;border:1px solid var(--line);border-radius:8px;color:#ddd;font:12px ui-monospace,monospace;padding:8px" placeholder='{"app":"panelsim",...}'></textarea><input type="file" accept=".json,application/json" id="impf" style="margin-top:8px;height:auto;border:0;padding:0"><p id="impe" style="color:#f87171;font-size:13px;margin:6px 0 0"></p><div class="row"><button class="btn ghost">Hủy</button><button class="btn" data-go="1">Nhập</button></div>`,()=>{});
+$('#mod').addEventListener('change',async e=>{if(e.target.id!=='impf'||!e.target.files[0])return;$('#modb textarea').value=await e.target.files[0].text()});
+$('#mod').addEventListener('click',e=>{if(!e.target.closest('[data-go]'))return;e.stopPropagation();try{const d=JSON.parse($('#modb textarea').value);if(!Array.isArray(d.comps)||!Array.isArray(d.wires))throw new Error('Thiếu comps / wires');
+ const comps=d.comps.filter(c=>c&&TY[c.type]&&c.id),ids=new Set(comps.map(c=>c.id));const wires=d.wires.filter(w=>w&&w.a&&w.b&&ids.has(w.a.c)&&ids.has(w.b.c));
+ const np={id:uid(),name:String(d.name||'Dự án nhập'),updated:Date.now(),comps,wires};projects.unshift(np);persist();$('#mod').classList.add('hide');home();
+ if(comps.length<d.comps.length)alertMsg(`Bỏ qua ${d.comps.length-comps.length} linh kiện không nhận ra.`)}catch(er){$('#impe').textContent='Không đọc được: '+er.message}},true);
+const alertMsg=m=>{const t=document.createElement('div');t.className='msg w';t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:20';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)};
+$('#tp').onclick=()=>{tab='p';home()};$('#tx').onclick=()=>{tab='x';home()};
+$('#newp').onclick=()=>modal(`<h3>Dự án mới</h3><input value="Tủ điện ${projects.length+1}"><div class="row"><button class="btn ghost">Hủy</button><button class="btn" data-ok="1">Tạo</button></div>`,v=>{P={id:uid(),name:(v||'').trim()||'Tủ điện',updated:Date.now(),comps:[],wires:[]};projects.unshift(P);persist();palOpen=true;openEd()});
+function openEd(){const ids=new Set();P.comps=P.comps.filter(c=>TY[c.type]&&ids.add(c.id));P.wires=P.wires.filter(w=>ids.has(w.a.c)&&ids.has(w.b.c)&&TY[comp(w.a.c).type].terms.some(t=>t.id===w.a.t)&&TY[comp(w.b.c).type].terms.some(t=>t.id===w.b.t));$('#home').classList.add('hide');$('#ed').classList.remove('hide');$('#pname').value=P.name;undoS=[];redoS=[];sel=null;pending=null;pal();ui();fit()}
+function openHome(){if(sim)stopSim();P=null;palOpen=false;$('#ed').classList.add('hide');$('#home').classList.remove('hide');home()}
+home();
+window.EP={plcCompile,rotSel,get P(){return P},get sim(){return sim},EX,TY,startSim,stopSim,tick,solve,openEx:i=>{const x=EX[i];P={id:'ex',name:x.name,updated:Date.now(),comps:[],wires:[],ex:1};x.build();openEd()},
+ press:(lab,dn)=>{const c=P.comps.find(x=>x.label===lab);const ty=TY[c.type];(dn?ty.down:(ty.up||(()=>{})))(sim.rt[c.id]);solve();render()},rt:lab=>sim.rt[P.comps.find(x=>x.label===lab).id]};
+}
+</script>
+<script>if('serviceWorker' in navigator&&location.protocol==='https:'){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>
+</body>
+</html>

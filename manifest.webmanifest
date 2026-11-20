@@ -1,0 +1,16 @@
+{
+  "name": "Mô phỏng tủ điện",
+  "short_name": "Simu Điện",
+  "description": "Mô phỏng tủ điện điều khiển: kéo thả linh kiện, đi dây, chạy mô phỏng.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#111214",
+  "theme_color": "#111214",
+  "lang": "vi",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

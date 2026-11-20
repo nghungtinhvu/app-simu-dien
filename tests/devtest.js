@@ -151,6 +151,28 @@ T_('plc analog',()=>{const prog='Q0 = AI0 > 60\nQ1 = AI0 <= 40\nAQ0 = AI0';mk((C
  ok('compile: bare AI is error',!!EP.plcCompile('Q0 = AI0').err);ok('compile: AQ0 bad source',!!EP.plcCompile('AQ0 = I0').err);ok('compile: >= works',!EP.plcCompile('Q0 = AI1 >= 12.5 & I0').err)});
 T_('analog examples',()=>{EP.openEx(9);EP.startSim();tap('-S1');run(4);ok('ex9: pot 50 % -> 25 Hz',Math.abs(r('-U1').f-25)<.01,r('-U1').f);ok('ex9: ammeter ≈ motor In',Math.abs(r('-P1').I-3.5)<.05,r('-P1').I);tap('-R1');run(2);ok('ex9: 60 % -> 30 Hz',Math.abs(r('-U1').f-30)<.01);EP.stopSim();
  EP.openEx(10);EP.startSim();run(1);ok('ex10: low level -> pump on',r('-KM1').on&&r('-M1').run);run(13.5);ok('ex10: reaches 85 % -> stops',!r('-KM1').on&&r('-TK1').lv>=82,r('-TK1').lv);run(20);ok('ex10: drains below 30 % -> restarts',r('-KM1').on,r('-TK1').lv);EP.stopSim()});
+// ---- timer 8 chân
+T_('tmr8',()=>{const b=(mode,t)=>mk((C,W)=>{const m=C('mains1','X'),s=C('sel','S'),k=C('tmr8','K',{mode,t});W(m,'L',s,'13');W(s,'14',k,'2');W(k,'7',m,'N')});const st=()=>[cn('K','1','K','3'),cn('K','8','K','6'),cn('K','1','K','4'),cn('K','8','K','5')].map(Number).join('');
+ const M=T.tmr8.pdef[0][2];
+ b(M[0],'2');ok('idle: 1-4, 8-5 closed (NC)',st()==='0011');tap('S');run(1.5);ok('A: before t still NC',st()==='0011');run(.6);ok('A: after t 1-3, 8-6 closed',st()==='1100');tap('S');run(.1);ok('A: power off resets',st()==='0011');stop();
+ b(M[1],'1');tap('S');run(.5);const a1=st();run(1);const a2=st();run(1);const a3=st();ok('B: off-on-off',a1==='0011'&&a2==='1100'&&a3==='0011',[a1,a2,a3]);stop();
+ b(M[2],'1');tap('S');run(.5);const b1=st();run(1);const b2=st();ok('B2: starts on',b1==='1100'&&b2==='0011',[b1,b2]);stop();
+ b(M[3],'1');tap('S');run(.5);ok('E: on immediately',st()==='1100');run(.6);ok('E: off after t',st()==='0011');stop();
+ b(M[4],'2');tap('S');run(.1);ok('H: on with power',st()==='1100');tap('S');run(1.5);ok('H: holds after power off',st()==='1100');run(.6);ok('H: off after t',st()==='0011');stop();
+ mk((C,W)=>{const m=C('mains3','X'),k=C('tmr8','K');W(m,'L1',k,'2');W(k,'7',m,'L2')});ok('230V timer on 400V burns',r('K').burnt===1);stop();
+ mk((C,W)=>{const m=C('mains3','X'),k=C('tmr8','K',{coil:'400VAC'});W(m,'L1',k,'2');W(k,'7',m,'L2')});ok('400VAC supply works',r('K').on&&!r('K').burnt)});
+// ---- logic: cấp sai điện áp, ngõ vào PLC
+T_('wrong voltage',()=>{mk((C,W)=>{const m=C('mains3','X'),f=C('fan','E'),h=C('heater','R'),b=C('buzzer','B'),g=C('psu','G');for(const c of[f,h]){W(m,'L1',c,'L');W(c,'N',m,'L2')}W(m,'L1',b,'X1');W(b,'X2',m,'L2');W(m,'L1',g,'L');W(g,'N',m,'L2')});run(.1);
+ ok('fan/heater/buzzer on 400V burn',r('E').burnt&&r('R').burnt&&r('B').burnt&&!r('E').run);ok('PSU on 400V burns, no output',r('G').burnt===1&&V('G','+','G','-')===0);stop();
+ mk((C,W)=>{const m=C('mains1','X'),p=C('proxpnp','P'),t=C('tower','H');W(m,'L',p,'BN');W(p,'BU',m,'N');W(m,'L',t,'R');W(t,'COM',m,'N')});run(.1);ok('24V sensor/tower on 230V AC burn',r('P').burnt&&r('H').burnt&&!r('H').R);stop();
+ mk((C,W)=>{const m=C('mains3','X'),k=C('contactor','K',{coil:'400VAC'});W(m,'L1',k,'A1');W(k,'A2',m,'L2')});ok('400VAC coil on 400V pulls in',r('K').on&&!r('K').burnt);stop();
+ mk((C,W)=>{const m=C('mains1','X'),k=C('contactor','K',{coil:'400VAC'});W(m,'L',k,'A1');W(k,'A2',m,'N')});ok('400VAC coil on 230V does not pull',!r('K').on&&!r('K').burnt)});
+T_('plc inputs sink/source',()=>{mk((C,W)=>{const m=C('mains1','X'),g=C('psu','G'),g2=C('psu','G2'),p=C('plc','PLC',{prog:'Q0 = I0'}),n=C('proxnpn','B');W(m,'L',g,'L');W(m,'N',g,'N');W(g,'+',p,'L+');W(g,'-',p,'M');W(m,'L',g2,'L');W(m,'N',g2,'N');
+  W(g2,'+',n,'BN');W(g2,'-',n,'BU');W(n,'BK',p,'I0');W(g2,'+',p,'I1')});run(.1);ok('source input (+24 to I1) on',r('PLC').i[1]);stop();
+ mk((C,W)=>{const m=C('mains1','X'),g=C('psu','G'),p=C('plc','PLC',{prog:'Q0 = 1'}),s=C('sel','S');W(m,'L',g,'L');W(m,'N',g,'N');W(g,'+',p,'L+');W(g,'-',p,'M');W(m,'L',s,'13');W(s,'14',p,'I3')});run(.1);ok('PLC running',r('PLC').q[0]===1);tap('S');run(.1);ok('230V AC into input -> PLC burnt, outputs off',r('PLC').burnt===1&&!r('PLC').q[0],log())});
+T_('wire colours',()=>{EP.openEx(0);const n=EP.recolorAll();const P=EP.P,L=l=>P.comps.find(c=>c.label===l).id;const col=(a,ta)=>P.wires.find(w=>(w.a.c===L(a)&&w.a.t===ta)||(w.b.c===L(a)&&w.b.t===ta)).color;
+ ok('recolour changed wires',n>0,n);ok('L1 from mains -> đỏ',col('-X1','L1')==='đỏ');ok('N -> xanh',col('-X1','N')==='xanh');ok('PE -> vàng-xanh',col('-X1','PE')==='vàngxanh');ok('control after Q2 -> đỏ',col('-Q2','2')==='đỏ');ok('coil A2 (N) -> xanh',col('-KM1','A2')==='xanh');
+ EP.openEx(3);EP.recolorAll();const P2=EP.P,id=l=>P2.comps.find(c=>c.label===l).id;ok('+24 -> đỏ, 0V -> xanh đậm',P2.wires.find(w=>w.a.c===id('-G1')&&w.a.t==='-').color==='xanhđậm'&&P2.wires.find(w=>w.a.c===id('-G1')&&w.a.t==='+').color==='đỏ')});
 // coverage
 const tested=new Set(OUT.map(o=>o[0]).join(' ').split(/[\s\/]+/));const miss=Object.keys(T).filter(k=>![...tested].some(t=>t===k));
 return JSON.stringify({res:OUT,miss})})()

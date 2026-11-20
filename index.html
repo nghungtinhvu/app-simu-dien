@@ -170,7 +170,7 @@ const IC={
  undo:'<path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>',redo:'<path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>',
  reset:'<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
- edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',rot:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',dl:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',ul:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',file:'<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',cap:'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>'
+ edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/>',rot:'<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>',dl:'<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>',ul:'<path d="M12 21V9M7 14l5-5 5 5M5 3h14"/>',file:'<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',cap:'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c3 2 9 2 12 0v-5"/>',drop:'<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/>'
 };
 const ic=(n,s=20)=>`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
 const WCOL={nâu:'#8b5a2b',đen:'#30343a',xám:'#9aa0a6',xanh:'#2f80ed',vàngxanh:'#a3c832',đỏ:'#e04848',xanhđậm:'#3248c8',trắng:'#e8e8e8'};
@@ -185,7 +185,7 @@ const strip=(w,y,h,f='#cfd5da')=>R(2,y,w-4,h,f,'none',2);
 // ====================== component library ======================
 // terminal: [id,x,y]   side inferred: y==0 top, y==h bottom
 const T=(id,x,y)=>({id,x,y});
-const COIL_OPTS=['230VAC','24VDC'];
+const COIL_OPTS=['230VAC','24VDC','400VAC'];
 const TY={};
 const def=(k,o)=>{TY[k]=Object.assign({k,params:{},pdef:[],conns:()=>[]},o)};
 const CATS=[['nguon','Nguồn','#22c55e'],['dau','Đầu nối','#a3c832'],['bv','Bảo vệ','#ef4444'],['kdt','Khởi động từ','#14b8a6'],['rl','Rơ le & timer','#3b82f6'],['dk','Thiết bị điều khiển','#a855f7'],['bh','Báo hiệu','#f59e0b'],['cc','Cơ cấu chấp hành','#9ca3af'],['cb','Cảm biến','#6366f1'],['do','Đo lường','#f97316'],['pp','Phân phối','#eab308'],['dc','Biến tần','#fb7185'],['plc','PLC','#22d3ee'],['qt','Quá trình','#38bdf8']];
@@ -203,7 +203,7 @@ def('psu',{name:'Bộ nguồn 24V DC',cat:'nguon',pre:'G',w:100,h:110,dark:1,pro
  terms:[T('L',25,0),T('N',55,0),T('+',30,110),T('-',70,110)],
  src:(c,r)=>r.on&&!r.trip?{'+':'+24','-':'0V'}:{},
  closed:r=>!r.trip,trip:r=>{r.trip=1},
- update:(c,r,X)=>{const v=X.V(c.id,'L','N');const on=v.k==='AC'&&v.v>=230;const ch=on!==!!r.on;r.on=on;return ch},
+ update:(c,r,X)=>{const v=X.V(c.id,'L','N');if(v.k==='AC'&&v.v===400&&!r.burnt){r.burnt=1;X.log('e',`${c.label}: cháy bộ nguồn (cấp 400V vào đầu vào 230V)`)}const on=!r.burnt&&v.k==='AC'&&v.v===230;const ch=on!==!!r.on;r.on=on;return ch},
  draw:(c,r)=>R(0,0,100,110,'#c9ced3','#8d959c',5)+R(8,22,84,66,'#2a2e33','none',3)+Tx(50,46,'24V DC',12,'#e8eaed','middle',600)+Tx(50,62,'POWER SUPPLY',7,'#9aa0a6')+
   `<circle cx="80" cy="78" r="4" fill="${r&&r.trip?'#ef4444':r&&r.on?'#22c55e':'#3a3f45'}"/>`+Tx(16,16,'L',8)+Tx(46,16,'N',8)+Tx(30,102,'+',9)+Tx(70,102,'−',9)+tag(c.label,30,80)});
 
@@ -242,6 +242,9 @@ def('ol',{name:'Rơ le nhiệt (OL)',cat:'bv',pre:'F',w:124,h:110,ia:1,params:{I
   ['1','3','5'].map((t,i)=>Tx(18+i*22,17,t,7)+Tx(18+i*22,101,String(+t+1),7)).join('')+Tx(88,17,'95',7)+Tx(108,17,'97',7)+Tx(88,101,'96',7)+Tx(108,101,'98',7)+tag(c.label,102,64)});
 
 const coilP={coil:'230VAC'},coilD=[['coil','Điện áp cuộn hút',COIL_OPTS]];
+// cấp sai điện áp thì cháy (giữ trạng thái cháy đến khi chạy lại mô phỏng)
+const pwrOk=(c,r,X,s,what)=>{if(s==='burn'&&!r.burnt){r.burnt=1;X.log('e',`${c.label}: cháy ${what} (sai điện áp)`)}return!r.burnt&&s==='on'};
+const acBurn=(c,r,X,v,what)=>{if(v.k==='AC'&&v.v&&!r.burnt){r.burnt=1;X.log('e',`${c.label}: cháy ${what} (cấp ${v.v}V AC vào thiết bị 24VDC)`)}};
 const coilUpd=(a,b)=>(c,r,X)=>{if(r.burnt){return false}const s=X.coil(c,a,b,c.params.coil);if(s==='burn'){r.burnt=1;r.on=0;X.log('e',`${c.label}: cháy cuộn hút (sai điện áp, cuộn ${c.params.coil})`);return true}const on=s==='on';const ch=on!==!!r.on;r.on=on;return ch};
 def('contactor',{name:'Contactor 3P + 1NO 1NC',cat:'kdt',pre:'KM',w:140,h:150,params:coilP,pdef:coilD,at:['A1'],cur:(c,r)=>r.on?(c.params.coil==='24VDC'?.25:.08):0,
  terms:[T('A1',14,0),T('1',36,0),T('3',58,0),T('5',80,0),T('13',102,0),T('21',124,0),T('A2',14,150),T('2',36,150),T('4',58,150),T('6',80,150),T('14',102,150),T('22',124,150)],
@@ -292,7 +295,7 @@ def('lamp',{name:'Đèn báo',cat:'bh',pre:'H',w:56,h:86,dark:1,at:['X1'],cur:(c
   return R(0,0,56,86,'#25282c','#3e434a',8)+(r.lit?`<circle cx="28" cy="43" r="24" fill="${col}" filter="url(#glow)" opacity=".8"/>`:'')+`<circle cx="28" cy="43" r="17" fill="#111"/><circle cx="28" cy="43" r="14" fill="${r.burnt?'#222':col}" opacity="${r.lit?1:.28}"/>`+
   (r.burnt?Tx(28,46,'×',12,'#ef4444'):'')+Tx(53,10,'X1',6,'#aaa','end')+Tx(53,82,'X2',6,'#aaa','end')+tag(c.label,28,14)}});
 def('buzzer',{name:'Còi báo',cat:'bh',pre:'H',w:56,h:86,dark:1,at:['X1'],cur:(c,r)=>r.lit?(c.params.v==='24VDC'?.05:.02):0,params:{v:'230VAC'},pdef:[['v','Điện áp',COIL_OPTS]],
- terms:[T('X1',28,0),T('X2',28,86)],post:(c,r,X)=>{r.lit=X.coil(c,'X1','X2',c.params.v)==='on'},
+ terms:[T('X1',28,0),T('X2',28,86)],post:(c,r,X)=>{r.lit=pwrOk(c,r,X,X.coil(c,'X1','X2',c.params.v),'còi')},
  draw:(c,r)=>R(0,0,56,86,'#25282c','#3e434a',8)+`<circle cx="28" cy="43" r="17" fill="#111"/>`+[0,1,2].map(i=>`<circle cx="28" cy="43" r="${5+i*4}" fill="none" stroke="${r.lit?'#f59e0b':'#444'}" stroke-width="1.5"/>`).join('')+(r.lit?Tx(28,74,'BEEP',7,'#f59e0b','middle',700):'')+tag(c.label,28,14)});
 
 const motorBody=(c,r,w,termsTxt)=>{const run=r.run&&!r.burnt;const f=r.burnt?'#5a2a2a':run?(r.mode==='Y'?'#4caf50':'#2fa84f'):'#8a929b';
@@ -430,6 +433,28 @@ def('ydtimer',{name:'Timer sao - tam giác (Y/Δ)',cat:'rl',pre:'KT',w:90,h:110,
   `<circle cx="22" cy="56" r="4" fill="${r.y?'#f59e0b':'#3a3426'}"/><circle cx="68" cy="56" r="4" fill="${r.d?'#f59e0b':'#3a3426'}"/>`+Tx(22,72,'Y',10,'#333','middle',700)+Tx(68,72,'Δ',10,'#333','middle',700)+Tx(45,60,(r.on&&r.y?Math.max(0,(+c.params.t||0)-(r.el||0)).toFixed(1):c.params.t)+'s',7,'#333')+
   Tx(15,17,'A1',7)+Tx(60,17,'17',7)+Tx(15,101,'A2',7)+Tx(45,101,'18',7)+Tx(75,101,'28',7)+tag(c.label,45,-10)});
 
+// ---------- timer 8 chân (kiểu Omron H3CR-A8 / Schneider RE48): 2-7 nguồn; 1 chung → 3 NO, 4 NC; 8 chung → 6 NO, 5 NC ----------
+const TM8=['A — Trễ đóng (ON-delay)','B — Nháy, bắt đầu TẮT','B2 — Nháy, bắt đầu BẬT','E — Bật t giây rồi tắt (interval)','H — Trễ mở khi mất nguồn (OFF-delay)'];
+const tm8m=c=>String(c.params.mode||TM8[0]).split(' ')[0];
+def('tmr8',{name:'Timer 8 chân đa chế độ (H3CR-A8)',cat:'rl',pre:'KT',w:120,h:120,params:{mode:TM8[0],t:'5',coil:'230VAC'},pdef:[['mode','Chế độ',TM8],['t','Thời gian t (s)','num'],['coil','Điện áp nguồn (chân 2-7)',COIL_OPTS]],
+ at:['2'],cur:(c,r)=>r.on?.02:0,
+ terms:[T('1',15,0),T('2',45,0),T('3',75,0),T('4',105,0),T('8',15,120),T('7',45,120),T('6',75,120),T('5',105,120)],
+ conns:(c,r)=>r.out?[['1','3'],['8','6']]:[['1','4'],['8','5']],
+ update:(c,r,X)=>{const was=!!r.on,o0=r.out?1:0;const ch=coilUpd('2','7')(c,r,X);const m=tm8m(c);
+  if(r.on&&!was){r.el=0;r.out=m==='B2'||m==='E'||m==='H'?1:0}
+  if(!r.on&&was){r.el=0;if(m!=='H')r.out=0}
+  return ch||(r.out?1:0)!==o0},
+ tick:(c,r,dt)=>{const m=tm8m(c),t=Math.max(m[0]==='B'?.1:0,+c.params.t||0);
+  if(r.on){r.el=(r.el||0)+dt;if(m==='A'&&!r.out&&r.el>=t){r.out=1;return true}if(m==='E'&&r.out&&r.el>=t){r.out=0;return true}if(m[0]==='B'&&r.el>=t){r.el=0;r.out=r.out?0:1;return true}}
+  else if(m==='H'&&r.out){r.el=(r.el||0)+dt;if(r.el>=t){r.out=0;return true}}return false},
+ draw:(c,r)=>{const m=tm8m(c),t=+c.params.t||0,el=Math.min(r.el||0,t),run=r.on||(m==='H'&&r.out);const a=-135+270*(t&&run?el/t:0);
+  return R(0,0,120,120,'#e5e7eb','#9ca3af',6)+strip(120,2,22)+strip(120,96,22)+R(8,27,104,66,'#1f2937','none',6)+
+  `<circle cx="38" cy="60" r="21" fill="#f9fafb" stroke="#9ca3af"/><line x1="38" y1="60" x2="38" y2="43" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" transform="rotate(${a.toFixed(1)} 38 60)"/><circle cx="38" cy="60" r="3" fill="#374151"/>`+
+  `<circle cx="74" cy="38" r="3.5" fill="${r.on?'#22c55e':'#1f3a2a'}"/><circle cx="100" cy="38" r="3.5" fill="${r.out?'#f59e0b':'#3a3426'}"/>`+Tx(74,50,'PWR',5.5,'#9ca3af')+Tx(100,50,'OUT',5.5,'#9ca3af')+
+  Tx(87,66,'Mode '+m,8,'#e5e7eb','middle',700)+Tx(87,80,(run&&t&&m[0]!=='B'?Math.max(0,t-el).toFixed(1):t)+' s',8,'#fde68a','middle',600)+(r.burnt?Tx(38,90,'CHÁY',7,'#f87171','middle',800):Tx(38,90,c.params.coil,5.5,'#9ca3af'))+
+  [['1','C'],['2','+'],['3','NO'],['4','NC']].map(([n,f],i)=>Tx(15+i*30,11,n,8,'#111','middle',700)+Tx(15+i*30,20,f,5,'#555')).join('')+
+  [['8','C'],['7','−'],['6','NO'],['5','NC']].map(([n,f],i)=>Tx(15+i*30,104,f,5,'#555')+Tx(15+i*30,115,n,8,'#111','middle',700)).join('')+tag(c.label,60,-12)}});
+
 // ---------- thiết bị điều khiển ----------
 def('pb2',{name:'Nút nhấn kép 1NO + 1NC',cat:'dk',pre:'S',w:80,h:90,dark:1,ia:1,params:{color:'Xanh'},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng']]],
  terms:[T('13',20,0),T('21',60,0),T('14',20,90),T('22',60,90)],conns:(c,r)=>r.p?[['13','14']]:[['21','22']],down:r=>{r.p=1},up:r=>{r.p=0},
@@ -441,7 +466,7 @@ def('sel3',{name:'Công tắc xoay 3 vị trí 1-0-2',cat:'dk',pre:'S',w:80,h:90
 // ---------- báo hiệu / chấp hành ----------
 def('tower',{name:'Đèn tháp 3 tầng 24VDC',cat:'bh',pre:'H',w:60,h:150,dark:1,
  terms:[T('R',12,150),T('Y',26,150),T('G',40,150),T('COM',54,150)],
- post:(c,r,X)=>{for(const k of['R','Y','G'])r[k]=X.V(c.id,k,'COM').v===24},
+ post:(c,r,X)=>{for(const k of['R','Y','G'])acBurn(c,r,X,X.V(c.id,k,'COM'),'đèn tháp');for(const k of['R','Y','G']){const v=X.V(c.id,k,'COM');r[k]=!r.burnt&&v.k==='DC'&&v.v===24}},
  draw:(c,r)=>[['R','#ef4444'],['Y','#facc15'],['G','#22c55e']].map(([k,col],i)=>(r[k]?R(4,8+i*36,52,34,col,'none',6,'filter="url(#glow)" opacity=".7"'):'')+R(8,10+i*36,44,30,col,'#222',4,`opacity="${r[k]?1:.25}"`)).join('')+R(14,118,32,14,'#333','none',2)+Tx(12,146,'R',6,'#aaa')+Tx(26,146,'Y',6,'#aaa')+Tx(40,146,'G',6,'#aaa')+tag(c.label,30,-10)});
 def('motor1',{name:'Động cơ 1 pha 230V (bơm)',cat:'cc',pre:'M',w:140,h:120,ia:1,down:jamTog,params:{In:'4',load:'100'},pdef:MPD,at:['L'],cur:curI,
  terms:[T('L',50,0),T('N',75,0),T('PE',100,0)],
@@ -453,10 +478,10 @@ def('motordc',{name:'Động cơ DC 24V',cat:'cc',pre:'M',w:120,h:110,ia:1,down:
  draw:(c,r)=>motorBody(c,r,120,Tx(45,26,'+',8,'#ddd')+Tx(75,26,'−',8,'#ddd'))});
 def('fan',{name:'Quạt thông gió 230V',cat:'cc',pre:'E',w:90,h:100,dark:1,at:['L'],cur:(c,r)=>r.run?.3:0,
  terms:[T('L',30,0),T('N',60,0)],
- post:(c,r,X,dt)=>{r.run=X.coil(c,'L','N','230VAC')==='on';r.ang=((r.ang||0)+(r.run?1400*dt:0))%360},
+ post:(c,r,X,dt)=>{r.run=pwrOk(c,r,X,X.coil(c,'L','N','230VAC'),'quạt');r.ang=((r.ang||0)+(r.run?1400*dt:0))%360},
  draw:(c,r)=>R(0,0,90,100,'#2b2f34','#555',6)+`<circle cx="45" cy="52" r="34" fill="#15171a" stroke="#555"/><g transform="rotate(${r.ang||0} 45 52)">${[0,90,180,270].map(a=>`<ellipse cx="45" cy="34" rx="7" ry="16" fill="${r.run?'#7dd3fc':'#9aa0a6'}" transform="rotate(${a} 45 52)"/>`).join('')}</g><circle cx="45" cy="52" r="6" fill="#444"/>`+Tx(30,12,'L',6,'#aaa')+Tx(60,12,'N',6,'#aaa')+tag(c.label,45,-10)});
 def('heater',{name:'Điện trở sưởi 230V',cat:'cc',pre:'E',w:90,h:80,params:{P:'2000'},pdef:[['P','Công suất (W)','num']],at:['L'],cur:(c,r)=>r.on?(+c.params.P||0)/230:0,
- terms:[T('L',25,0),T('N',65,0)],post:(c,r,X)=>{r.on=X.coil(c,'L','N','230VAC')==='on'},
+ terms:[T('L',25,0),T('N',65,0)],post:(c,r,X)=>{r.on=pwrOk(c,r,X,X.coil(c,'L','N','230VAC'),'điện trở sưởi')},
  draw:(c,r)=>R(0,0,90,80,'#9aa0a6','#555',5)+`<path d="M10 45 l8 -12 l8 24 l8 -24 l8 24 l8 -24 l8 24 l8 -24 l8 12" fill="none" stroke="${r.on?'#ff6b1a':'#444'}" stroke-width="4" ${r.on?'filter="url(#glow)"':''}/><path d="M10 45 l8 -12 l8 24 l8 -24 l8 24 l8 -24 l8 24 l8 -24 l8 12" fill="none" stroke="${r.on?'#ffb36b':'#555'}" stroke-width="2.5"/>`+Tx(45,74,r.on?'ĐANG SƯỞI':'',7,'#7c2d12','middle',700)+tag(c.label,45,-10)});
 def('valve',{name:'Van điện từ',cat:'cc',pre:'Y',w:80,h:100,params:{coil:'24VDC'},pdef:coilD,at:['A1'],cur:(c,r)=>r.lit?(c.params.coil==='24VDC'?.3:.05):0,
  terms:[T('A1',25,0),T('A2',55,0)],
@@ -472,14 +497,14 @@ swCO('press','Công tắc áp suất 1CO','B','ĐỦ ÁP','THIẾU ÁP','#d4d4d8
 const proxDef=(k,name,typ)=>def(k,{name,cat:'cb',pre:'B',w:60,h:110,ia:1,
  terms:[T('BN',12,110),T('BU',30,110),T('BK',48,110)],
  src:(c,r)=>r.pw&&r.p?{BK:typ==='PNP'?'+24':'0V'}:{},
- update:(c,r,X)=>{const pw=X.V(c.id,'BN','BU').v===24;const ch=pw!==!!r.pw;r.pw=pw;return ch},down:r=>{r.p=r.p?0:1},
+ update:(c,r,X)=>{const v=X.V(c.id,'BN','BU');acBurn(c,r,X,v,'cảm biến');const pw=!r.burnt&&v.k==='DC'&&v.v===24;const ch=pw!==!!r.pw;r.pw=pw;return ch},down:r=>{r.p=r.p?0:1},
  draw:(c,r)=>(r.p?R(8,-28,44,16,'#64748b','#334155',3)+Tx(30,-17,'VẬT',7,'#fff','middle',700):'')+R(14,0,32,70,'#9ca3af','#555',4)+R(14,0,32,10,'#1d4ed8','none',2)+`<circle cx="30" cy="22" r="4" fill="${r.pw&&r.p?'#f59e0b':r.pw?'#22c55e':'#333'}"/>`+Tx(30,48,typ,7,'#111','middle',700)+
   `<path d="M30 70 V90" stroke="#333" stroke-width="5"/>`+R(4,90,52,20,'#2b2f34','none',3)+Tx(12,104,'BN',6,'#c08a5a')+Tx(30,104,'BU',6,'#60a5fa')+Tx(48,104,'BK',6,'#ddd')+tag(c.label,30,-40)});
 proxDef('proxpnp','Cảm biến tiệm cận PNP (3 dây)','PNP');proxDef('proxnpn','Cảm biến tiệm cận NPN (3 dây)','NPN');
 
 // ---------- đo lường ----------
 def('hourm',{name:'Đồng hồ đếm giờ chạy',cat:'do',pre:'P',w:80,h:70,dark:1,params:{coil:'230VAC'},pdef:coilD,terms:[T('A1',25,70),T('A2',55,70)],
- post:(c,r,X,dt)=>{if(X.coil(c,'A1','A2',c.params.coil)==='on'){r.on=1;r.s=(r.s||0)+dt}else r.on=0},
+ post:(c,r,X,dt)=>{if(pwrOk(c,r,X,X.coil(c,'A1','A2',c.params.coil),'đồng hồ đếm giờ')){r.on=1;r.s=(r.s||0)+dt}else r.on=0},
  draw:(c,r)=>{const s=Math.floor(r.s||0);return R(0,0,80,70,'#1c1f23','#3e434a',6)+R(8,14,64,26,'#111','#444',3)+Tx(66,32,`${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor(s/60)%60).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`,11,'#fafafa','end',600)+`<circle cx="14" cy="52" r="3" fill="${r.on?'#22c55e':'#333'}"/>`+Tx(44,55,'HOUR METER',6,'#888')+tag(c.label,40,-10)}});
 def('phseq',{name:'Chỉ thị thứ tự pha',cat:'do',pre:'P',w:90,h:80,dark:1,terms:[T('L1',20,80),T('L2',45,80),T('L3',70,80)],
  post:(c,r,X)=>{const p=['L1','L2','L3'].map(t=>X.pot(c.id,t));r.p=p.map(phases);r.seq=p.every(phases)&&new Set(p).size===3?dirOf(...p):''},
@@ -533,8 +558,8 @@ def('plc',{name:'PLC mini 8DI / 4DO relay',cat:'plc',pre:'PLC',w:240,h:130,ia:1,
  aout:(c,r)=>r.pw&&r.aq!=null?{AQ0:{v:4+16*r.aq/100,u:'mA'}}:{},
  conns:(c,r)=>{const q=r.q||[];const o=[];if(q[0])o.push(['1L','Q0']);if(q[1])o.push(['1L','Q1']);if(q[2])o.push(['2L','Q2']);if(q[3])o.push(['2L','Q3']);return o},
  down:r=>{r.stop=r.stop?0:1},
- update:(c,r,X)=>{const prog=plcCompile(c.params.prog);r.err=prog.err;const pw=X.V(c.id,'L+','M').v===24;r.pw=pw;
-  const I=[0,1,2,3,4,5,6,7].map(i=>pw&&X.V(c.id,'I'+i,'M').v===24);r.i=I;const AI=[0,1].map(n=>{const g=pw&&X.sig(c.id,'AI'+n);return!g?null:100*cl01(g.u==='mA'?(g.v-4)/16:g.v/10)});r.ai=AI;let aq=null;const old=(r.q||[]).join();
+ update:(c,r,X)=>{const prog=plcCompile(c.params.prog);r.err=prog.err;const vs=X.V(c.id,'L+','M');acBurn(c,r,X,vs,'PLC');let pw=!r.burnt&&vs.k==='DC'&&vs.v===24;
+  const I=[0,1,2,3,4,5,6,7].map(i=>{const v=X.V(c.id,'I'+i,'M'),pi=X.pot(c.id,'I'+i);if(pw&&(phases(pi)||pi==='T1')&&!r.burnt){r.burnt=1;X.log('e',`${c.label}: cháy ngõ vào I${i} (đưa điện 230/400V AC vào ngõ vào 24VDC)`)}return pw&&v.k==='DC'&&Math.abs(v.v)===24});if(r.burnt){pw=false;I.fill(false)}r.pw=pw;r.i=I;const AI=[0,1].map(n=>{const g=pw&&X.sig(c.id,'AI'+n);return!g?null:100*cl01(g.u==='mA'?(g.v-4)/16:g.v/10)});r.ai=AI;let aq=null;const old=(r.q||[]).join();
   r.M=r.M||{};r.T=r.T||{};r.C=r.C||{};let Q=r.Q||[0,0,0,0];
   if(!pw||prog.err||r.stop){Q=[0,0,0,0];if(!pw){r.M={};r.T={};r.C={}}}
   else{const s={ai:n=>AI[n]||0,get:n=>n[0]==='I'?I[+n.slice(1)]:n[0]==='Q'?!!Q[+n.slice(1)]:n[0]==='M'?!!r.M[n]:n[0]==='T'?!!(r.T[n]&&r.T[n].done):!!(r.C[n]&&r.C[n].done)};
@@ -616,7 +641,7 @@ def('flowsw',{name:'Công tắc dòng chảy (flow switch)',cat:'cb',pre:'B',w:1
 def('lvl61f',{name:'Rơ le phao điện 61F (cạn - đầy)',cat:'rl',pre:'K',w:120,h:130,params:{mode:'Cấp nước'},pdef:[['mode','Chế độ',['Cấp nước','Xả nước']]],
  terms:[T('A1',14,0),T('A2',34,0),T('E1',62,0),T('E2',84,0),T('E3',106,0),T('Tc',30,130),T('Ta',60,130),T('Tb',90,130)],
  conns:(c,r)=>r.out?[['Tc','Ta']]:[['Tc','Tb']],
- update:(c,r,X)=>{const pw=X.coil(c,'A1','A2','230VAC')==='on';const n3=X.net(c.id,'E3');const hi=X.net(c.id,'E1')===n3,lo=X.net(c.id,'E2')===n3;r.pw=pw;r.hi=hi;r.lo=lo;
+ update:(c,r,X)=>{const pw=pwrOk(c,r,X,X.coil(c,'A1','A2','230VAC'),'rơ le 61F');const n3=X.net(c.id,'E3');const hi=X.net(c.id,'E1')===n3,lo=X.net(c.id,'E2')===n3;r.pw=pw;r.hi=hi;r.lo=lo;
   let out=r.out?1:0;if(!pw)out=0;else if(c.params.mode==='Xả nước'){if(hi)out=1;else if(!lo)out=0}else{if(!lo)out=1;else if(hi)out=0}
   const ch=out!==(r.out?1:0);r.out=out;return ch},
  draw:(c,r)=>R(0,0,120,130,'#f3f4f6','#9ca3af',6)+strip(120,2,24)+strip(120,104,24)+R(8,30,104,16,'#0369a1','none',2)+Tx(60,41,'FLOATLESS LEVEL RELAY',6,'#fff','middle',700)+
@@ -670,11 +695,14 @@ const atxVal=(c,r)=>{const t=lk(c.params.tank);return t&&sim&&sim.rt[t.id]?sim.r
 def('atx',{name:'Cảm biến analog 4–20 mA (3 dây)',cat:'cb',pre:'B',w:80,h:110,ia:1,st:{val:50},params:{kind:ATXK[0],tank:''},
  pdef:[['kind','Đại lượng đo',ATXK],['tank','Đo mức của bồn (để trống = chỉnh tay khi chạy)','link',['tank']]],
  terms:[T('BN',16,110),T('BU',40,110),T('OUT',64,110)],down:r=>{r.val=(r.val||0)>=100?0:Math.min(100,Math.round((r.val||0)/10)*10+10)},
- aout:(c,r,X)=>X.V(c.id,'BN','BU').v===24?{OUT:{v:4+16*Math.max(0,Math.min(100,atxVal(c,r)))/100,u:'mA'}}:{},
- post:(c,r,X)=>{r.pv=atxVal(c,r);r.pw=X.V(c.id,'BN','BU').v===24},
+ aout:(c,r,X)=>{const v=X.V(c.id,'BN','BU');return!r.burnt&&v.k==='DC'&&v.v===24?{OUT:{v:4+16*Math.max(0,Math.min(100,atxVal(c,r)))/100,u:'mA'}}:{}},
+ post:(c,r,X)=>{r.pv=atxVal(c,r);const v=X.V(c.id,'BN','BU');acBurn(c,r,X,v,'cảm biến');r.pw=!r.burnt&&v.k==='DC'&&v.v===24},
  draw:(c,r)=>{const v=r.pv!==undefined?r.pv:(r.val||0),k=ATXK.indexOf(c.params.kind);const txt=k===1?(v/10).toFixed(1)+' bar':k===2?(v*1.5).toFixed(0)+' °C':v.toFixed(0)+' %';
   return R(16,0,48,22,'#9ca3af','#555',3)+R(6,22,68,62,'#e5e7eb','#9ca3af',6)+R(12,30,56,22,'#111827','none',3)+Tx(62,45,txt,9,'#86efac','end',600)+Tx(40,64,r.pw?(4+16*Math.max(0,Math.min(100,v))/100).toFixed(1)+' mA':'4–20 mA',7,'#374151','middle',600)+
   Tx(40,78,lk(c.params.tank)?'→ '+lkl(c.params.tank):'bấm để chỉnh',6,'#6b7280')+R(4,88,72,22,'#2b2f34','none',3)+Tx(16,103,'BN',6,'#c08a5a')+Tx(40,103,'BU',6,'#60a5fa')+Tx(64,103,'OUT',6,'#c4b5fd')+tag(c.label,40,-10)}});
+
+// dấu "CHÁY" cho thiết bị mà hình vẽ chưa tự thể hiện
+for(const k of['fan','heater','buzzer','hourm','tower','proxpnp','proxnpn','psu','plc','atx','lvl61f','timer_on','timer_off','ydtimer']){const d=TY[k].draw,w=TY[k].w;TY[k].draw=(c,r)=>d(c,r)+(r&&r.burnt?R(2,2,w-4,15,'#7f1d1d','#ef4444',3)+Tx(w/2,13,'CHÁY',9,'#fecaca','middle',800):'')}
 
 // ---------- bảo vệ quá dòng theo dòng điện ----------
 // K: hằng số thời gian nhiệt (t = K / ((I/In)² − 1)), thr: ngưỡng bắt đầu nóng, mag: cắt tức thời (× In)
@@ -743,7 +771,7 @@ function makeX(N,rt){
   // tín hiệu analog (4–20 mA / 0–10 V) theo net: {v, u:'mA'|'V'}
   sigs:()=>{if(S)return S;S={};for(const c of P.comps){const a=TY[c.type].aout;if(!a)continue;const o=a(c,rt[c.id]||{},X);for(const t in o)S[N.net[c.id+':'+t]]=o[t]}return S},
   sig:(cid,t)=>X.sigs()[N.net[cid+':'+t]]||null,
-  coil:(c,a,b,spec)=>{const v=V(c.id,a,b);if(spec==='24VDC'){if(v.k==='AC'&&v.v)return'burn';return Math.abs(v.v)===24?'on':'off'}if(v.k==='AC'&&v.v===230)return'on';if(v.k==='AC'&&v.v===400)return'burn';return'off'},
+  coil:(c,a,b,spec)=>{const v=V(c.id,a,b);if(spec==='400VAC')return v.k==='AC'&&v.v===400?'on':'off';if(spec==='24VDC'){if(v.k==='AC'&&v.v)return'burn';return Math.abs(v.v)===24?'on':'off'}if(v.k==='AC'&&v.v===230)return'on';if(v.k==='AC'&&v.v===400)return'burn';return'off'},
   log:(t,m)=>simLog(t,m),dirty:()=>{sim.dirty=1},
   vfdFor:mc=>{const ins=TY[mc.type].terms.map(t=>N.net[mc.id+':'+t.id]);for(const c of P.comps){if(c.type!=='vfd')continue;if(['U','V','W'].some(t=>ins.includes(N.net[c.id+':'+t])))return rt[c.id].f||0}return null},
   olFor:mc=>{for(const c of P.comps){if(c.type!=='ol'||rt[c.id].trip)continue;const outs=['2','4','6'].map(t=>N.net[c.id+':'+t]);const ins=TY[mc.type].terms.map(t=>N.net[mc.id+':'+t.id]);if(outs.some(o=>ins.includes(o)))return{c,r:rt[c.id]}}return null}};return X}
@@ -756,7 +784,7 @@ function solve(){
    let done=null;
    for(const c of cands){const save=JSON.stringify(rt[c.id]);TY[c.type].trip(rt[c.id]);if(shorts(buildNets(rt)).length<sh.length){done=c;break}rt[c.id]=JSON.parse(save)}
    if(done){simLog('e',`${done.label} tác động: ${TY[done.type].earthOnly?'DÒNG RÒ / CHẠM VỎ':earth&&/^rc/.test(done.type)?'CHẠM ĐẤT':'NGẮN MẠCH'}`);continue}
-   sim.fault=sh;simLog('e','Ngắn mạch không có thiết bị bảo vệ ngắt được. Mô phỏng dừng lại, kiểm tra các dây màu đỏ.');sim.paused=1;sim.N=N;return}
+   sim.fault=sh;simLog('e','Ngắn mạch không có thiết bị bảo vệ ngắt được. Mô phỏng dừng lại, kiểm tra các dây màu vàng.');sim.paused=1;sim.N=N;return}
   const X=makeX(N,rt);let ch=false;
   for(const c of P.comps){const u=TY[c.type].update;if(u&&u(c,rt[c.id],X))ch=true}
   if(!ch)break}
@@ -795,10 +823,10 @@ function startSim(){
  if(!P.comps.some(c=>TY[c.type].src&&c.type!=='psu'))simLog('w','Chưa có nguồn điện. Thêm “Nguồn 3 pha” hoặc “Nguồn 1 pha”.');
  solve();timer=setInterval(()=>tick(.05),50);ui();render()}
 function stopSim(){clearInterval(timer);timer=null;sim=null;$('#log').innerHTML='';ui();render()}
-function simLog(t,m){if(!sim)return;const last=sim.log[sim.log.length-1];if(last&&last.m===m)return;sim.log.push({t,m,at:sim.t});const el=document.createElement('div');el.className='msg '+(t==='e'?'e':t==='w'?'w':'');el.innerHTML=`<small>${sim.t.toFixed(1)} s</small>${esc(m)}`;const L=$('#log');L.appendChild(el);while(L.children.length>6)L.firstChild.remove();L.scrollTop=1e6}
+function simLog(t,m){if(!sim||sim.quiet)return;const last=sim.log[sim.log.length-1];if(last&&last.m===m)return;sim.log.push({t,m,at:sim.t});const el=document.createElement('div');el.className='msg '+(t==='e'?'e':t==='w'?'w':'');el.innerHTML=`<small>${sim.t.toFixed(1)} s</small>${esc(m)}`;const L=$('#log');L.appendChild(el);while(L.children.length>6)L.firstChild.remove();L.scrollTop=1e6}
 
 // ====================== rendering ======================
-const POTC={L1:'#ff8a3d',L2:'#ff8a3d',L3:'#ff8a3d',N:'#4fc3f7','+24':'#ff5252','0V':'#7c8cff',PE:'#c6e34a',T1:'#ff8a3d',T0:'#4fc3f7','+10':'#f472b6'},SIGC='#c084fc';
+const POTC={L1:'#ff4d4d',L2:'#ff4d4d',L3:'#ff4d4d',N:'#38bdf8','+24':'#ff4d4d','0V':'#7c8cff',PE:'#c6e34a',T1:'#ff4d4d',T0:'#38bdf8','+10':'#f472b6'},SIGC='#c084fc';
 // ====================== đi dây tự động (A* trên lưới) ======================
 const G=10;const RC=new Map();let RF=new Map(),routesDirty=true;
 const same=(a,b)=>a[0]===b[0]&&a[1]===b[1];
@@ -858,7 +886,7 @@ function tidy(w){const E=ends(w);if(!E)return;const L=simplify(orth([E.p1,...w.p
 // chỉ đổi khung nhìn (kéo nền, phóng to) — không dựng lại sơ đồ
 function renderView(){if(!P)return;$('#world').setAttribute('transform',`translate(${view.x} ${view.y}) scale(${view.k})`);$('#dots').setAttribute('patternTransform',`translate(${view.x} ${view.y}) scale(${view.k})`)}
 // màu dây / màu cực theo kết quả mô phỏng
-function wireLook(w,N,fault){let col=WCOL[w.color]||WCOL.xám,flow='';if(N){const n=N.net[w.a.c+':'+w.a.t];const mp=mainPot(N.pots[n]);if(fault.has(n))col='#ff1744';else if(mp)flow=POTC[mp];else if(sim&&sim.sig&&sim.sig.has(n))flow=SIGC}return[flow||col,flow]}
+function wireLook(w,N,fault){let col=WCOL[w.color]||WCOL.xám,flow='';if(N){const n=N.net[w.a.c+':'+w.a.t];const mp=mainPot(N.pots[n]);if(fault.has(n))col='#facc15';else if(mp)flow=POTC[mp];else if(sim&&sim.sig&&sim.sig.has(n))flow=SIGC}return[flow||col,flow]}
 function termFill(c,t,N){if(N){const n=N.net[c.id+':'+t];const mp=mainPot(N.pots[n]);if(mp)return POTC[mp];if(sim&&sim.sig&&sim.sig.has(n))return SIGC}return'#b8c0c8'}
 // khi đang mô phỏng: chỉ cập nhật phần thay đổi
 function renderSim(){const E=sim.el,rt=sim.rt,N=sim.N,fault=new Set(sim.fault||[]);
@@ -896,12 +924,12 @@ function ui(){
  const b=$('#bar');const sw=Object.entries(WCOL).map(([k,v])=>`<button class="sw ${k===wcol?'on':''}" data-col="${k}" style="background:${v}" title="Dây ${k}" aria-label="Màu dây ${k}"></button>`).join('');
  if(sim){b.innerHTML=`<button class="ibtn" id="bStop" title="Dừng mô phỏng">${ic('stop')}</button><button class="ibtn ${sim.paused?'on':''}" id="bPause" title="Tạm dừng / tiếp tục">${ic(sim.paused?'play':'pause')}</button><button class="ibtn" id="bRestart" title="Chạy lại từ đầu">${ic('reset')}</button><button class="ibtn" id="bFit" title="Vừa màn hình">${ic('fit')}</button>`;
   $('#mode').textContent=sim.paused?'Tạm dừng':'Đang mô phỏng';$('#mode').className='chip '+(sim.paused?'pause':'run');$('#hint').textContent='Bấm nút nhấn, CB, công tắc để điều khiển. Giữ chuột trên nút nhấn để nhấn giữ.';$('#cv').classList.add('sim');$('#pal').classList.add('hide');$('#ins').classList.add('hide')}
- else{b.innerHTML=`<button class="ibtn" id="bBack" title="Về danh sách">${ic('back')}</button><span class="sep"></span><button class="ibtn ${palOpen?'on':''}" id="bAdd" title="Thêm linh kiện">${ic('plus')}</button><button class="ibtn" id="bRun" title="Chạy mô phỏng">${ic('play')}</button><button class="ibtn" id="bFit" title="Vừa màn hình">${ic('fit')}</button><button class="ibtn ${locked?'on':''}" id="bLock" title="Khóa vị trí linh kiện">${ic(locked?'lock':'unlock')}</button><span class="sep"></span><div class="swrow">${sw}</div><button class="sw on cyc" data-cyc="1" style="background:${WCOL[wcol]}" aria-label="Đổi màu dây (đang: ${wcol})"></button><span style="flex:1"></span><button class="ibtn" id="bUndo" title="Hoàn tác (Ctrl+Z)">${ic('undo')}</button><button class="ibtn" id="bRedo" title="Làm lại (Ctrl+Y)">${ic('redo')}</button>`;
+ else{b.innerHTML=`<button class="ibtn" id="bBack" title="Về danh sách">${ic('back')}</button><span class="sep"></span><button class="ibtn ${palOpen?'on':''}" id="bAdd" title="Thêm linh kiện">${ic('plus')}</button><button class="ibtn" id="bRun" title="Chạy mô phỏng">${ic('play')}</button><button class="ibtn" id="bFit" title="Vừa màn hình">${ic('fit')}</button><button class="ibtn ${locked?'on':''}" id="bLock" title="Khóa vị trí linh kiện">${ic(locked?'lock':'unlock')}</button><button class="ibtn" id="bPaint" title="Tô màu dây theo nguồn: L đỏ, N xanh, PE vàng-xanh">${ic('drop')}</button><span class="sep"></span><div class="swrow">${sw}</div><button class="sw on cyc" data-cyc="1" style="background:${WCOL[wcol]}" aria-label="Đổi màu dây (đang: ${wcol})"></button><span style="flex:1"></span><button class="ibtn" id="bUndo" title="Hoàn tác (Ctrl+Z)">${ic('undo')}</button><button class="ibtn" id="bRedo" title="Làm lại (Ctrl+Y)">${ic('redo')}</button>`;
   $('#mode').textContent='Chế độ lắp ráp';$('#mode').className='chip';$('#hint').textContent=pending?'Bấm cực khác để nối, bấm nền để bẻ góc, Esc để hủy':'Bấm vào cực (chấm tròn) để bắt đầu đi dây. Kéo nền để di chuyển, cuộn để phóng to.';$('#cv').classList.remove('sim');$('#pal').classList.toggle('hide',!palOpen)}$('#ed').classList.toggle('po',palOpen&&!sim)}
 $('#bar').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
  if(t.dataset.cyc){const ks=Object.keys(WCOL);wcol=ks[(ks.indexOf(wcol)+1)%ks.length];if(sel&&sel.w){const w=P.wires.find(x=>x.id===sel.w);if(w){snapUndo();w.color=wcol;save()}}ui();render();return}
  if(t.dataset.col){wcol=t.dataset.col;if(sel&&sel.w){const w=P.wires.find(x=>x.id===sel.w);if(w){snapUndo();w.color=wcol;save()}}ui();render();return}
- ({bBack:()=>openHome(),bAdd:()=>{palOpen=!palOpen;ui()},bRun:startSim,bStop:stopSim,bPause:()=>{sim.paused=sim.paused?0:1;if(!sim.paused&&sim.fault){stopSim();startSim();return}ui()},bRestart:()=>{stopSim();startSim()},bFit:fit,bLock:()=>{locked=!locked;ui()},bUndo:undo,bRedo:redo}[t.id]||(()=>{}))()});
+ ({bBack:()=>openHome(),bAdd:()=>{palOpen=!palOpen;ui()},bRun:startSim,bStop:stopSim,bPause:()=>{sim.paused=sim.paused?0:1;if(!sim.paused&&sim.fault){stopSim();startSim();return}ui()},bRestart:()=>{stopSim();startSim()},bFit:fit,bLock:()=>{locked=!locked;ui()},bPaint:recolorAll,bUndo:undo,bRedo:redo}[t.id]||(()=>{}))()});
 
 function ins(){
  const I=$('#ins');if(!sel||sim){I.classList.add('hide');return}I.classList.remove('hide');if(I.contains(document.activeElement)&&I.dataset.sel===JSON.stringify(sel))return;I.dataset.sel=JSON.stringify(sel);
@@ -991,7 +1019,12 @@ addEventListener('pointerup',e=>{
  if(pending&&!sim){const hit=document.elementFromPoint(e.clientX,e.clientY);const tEl=hit&&hit.closest&&hit.closest('[data-t]');if(tEl&&Math.abs(e.clientX-pending.sx)+Math.abs(e.clientY-pending.sy)>8){const a={c:tEl.dataset.c,t:tEl.dataset.t};if(a.c!==pending.a.c||a.t!==pending.a.t){finishWire(a);ui();render()}}}
  if(drag){if(drag.moved&&drag.w){tidy(drag.w);routesDirty=true;render()}if(drag.moved)save();if(drag.des&&!sim){sel=null;render()}drag=null}});
 cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;const k=Math.min(3,Math.max(.2,view.k*Math.exp(-e.deltaY*.0015)));view.x=mx-(mx-view.x)*k/view.k;view.y=my-(my-view.y)*k/view.k;view.k=k;renderView()},{passive:false});
-function finishWire(b){snapUndo();let pts=[];if(pending.pts.length){const ca=comp(pending.a.c),cb=comp(b.c);const p1=tpos(ca,pending.a.t),d1=tside(ca,pending.a.t),p2=tpos(cb,b.t),d2=tside(cb,b.t);pts=[[p1[0]+d1[0]*20,p1[1]+d1[1]*20],...pending.pts,[p2[0]+d2[0]*20,p2[1]+d2[1]*20]]}const w={id:uid(),a:pending.a,b,pts,color:wcol,v3:1};P.wires.push(w);if(pts.length)tidy(w);pending=null;save()}
+// màu dây theo nguồn: giải mạch tĩnh (CB đóng, contactor nhả) rồi xem cực nối vào thế nào
+const PCOL={L1:'đỏ',L2:'đỏ',L3:'đỏ',T1:'đỏ','+24':'đỏ',N:'xanh',T0:'xanh',PE:'vàngxanh','0V':'xanhđậm','+10':'trắng'};
+function staticNets(){if(sim)return sim.N;const rt={};for(const c of P.comps)rt[c.id]=JSON.parse(JSON.stringify(c.st||{}));const keep=sim;sim={rt,t:0,paused:0,log:[],N:null,quiet:1};try{solve()}catch(e){}const N=sim.N;sim=keep;return N}
+const potColor=(N,e)=>{if(!N)return null;const p=mainPot(N.pots[N.net[e.c+':'+e.t]]);return p?PCOL[p]:null};
+function recolorAll(){const N=staticNets();snapUndo();let n=0;for(const w of P.wires){const c=potColor(N,w.a)||potColor(N,w.b);if(c&&c!==w.color){w.color=c;n++}}save();render();alertMsg(n?`Đã tô lại màu ${n} dây theo nguồn (L đỏ, N xanh, PE vàng-xanh).`:'Màu dây đã đúng theo nguồn.');return n}
+function finishWire(b){snapUndo();let pts=[];if(pending.pts.length){const ca=comp(pending.a.c),cb=comp(b.c);const p1=tpos(ca,pending.a.t),d1=tside(ca,pending.a.t),p2=tpos(cb,b.t),d2=tside(cb,b.t);pts=[[p1[0]+d1[0]*20,p1[1]+d1[1]*20],...pending.pts,[p2[0]+d2[0]*20,p2[1]+d2[1]*20]]}const N0=staticNets();const w={id:uid(),a:pending.a,b,pts,color:potColor(N0,pending.a)||potColor(N0,b)||wcol,v3:1};P.wires.push(w);if(pts.length)tidy(w);pending=null;save()}
 addEventListener('keydown',e=>{if($('#ed').classList.contains('hide')||e.target.matches('input,select'))return;
  if(e.key==='Escape'){pending=null;sel=null;ui();render()}
  if(sim)return;
@@ -1156,7 +1189,7 @@ function openEd(){RC.clear();routesDirty=true;const ids=new Set();P.comps=P.comp
 function migrateLinks(p){for(const c of p.comps)for(const d of TY[c.type].pdef)if(d[2]==='link'){const v=c.params[d[0]];if(v&&!p.comps.some(x=>x.id===v)){const x=p.comps.find(x=>x.label===v);c.params[d[0]]=x?x.id:''}}}
 function openHome(){if(sim)stopSim();P=null;palOpen=false;$('#ed').classList.add('hide');$('#home').classList.remove('hide');home()}
 home();
-window.EP={plcCompile,rotSel,routeOf,vb:(l1,t1,l2,t2)=>{const N=sim.N,c1=P.comps.find(x=>x.label===l1),c2=P.comps.find(x=>x.label===l2);return Vsets(N.pots[N.net[c1.id+':'+t1]],N.pots[N.net[c2.id+':'+t2]])},conn:(l1,t1,l2,t2)=>{const N=sim.N,c1=P.comps.find(x=>x.label===l1),c2=P.comps.find(x=>x.label===l2);return N.net[c1.id+':'+t1]===N.net[c2.id+':'+t2]},get P(){return P},get sim(){return sim},EX,TY,startSim,stopSim,tick,solve,openEx:i=>{const x=EX[i];P={id:'ex',name:x.name,updated:Date.now(),comps:[],wires:[],ex:1};x.build();openEd()},
+window.EP={plcCompile,recolorAll,rotSel,routeOf,vb:(l1,t1,l2,t2)=>{const N=sim.N,c1=P.comps.find(x=>x.label===l1),c2=P.comps.find(x=>x.label===l2);return Vsets(N.pots[N.net[c1.id+':'+t1]],N.pots[N.net[c2.id+':'+t2]])},conn:(l1,t1,l2,t2)=>{const N=sim.N,c1=P.comps.find(x=>x.label===l1),c2=P.comps.find(x=>x.label===l2);return N.net[c1.id+':'+t1]===N.net[c2.id+':'+t2]},get P(){return P},get sim(){return sim},EX,TY,startSim,stopSim,tick,solve,openEx:i=>{const x=EX[i];P={id:'ex',name:x.name,updated:Date.now(),comps:[],wires:[],ex:1};x.build();openEd()},
  press:(lab,dn)=>{const c=P.comps.find(x=>x.label===lab);const ty=TY[c.type];(dn?ty.down:(ty.up||(()=>{})))(sim.rt[c.id]);solve();render()},rt:lab=>sim.rt[P.comps.find(x=>x.label===lab).id]};
 }
 </script>

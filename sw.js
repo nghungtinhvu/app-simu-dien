@@ -1,5 +1,5 @@
 // Bộ nhớ đệm offline. Đổi VERSION mỗi lần cập nhật app để máy người dùng tải bản mới.
-const VERSION = 'simu-v5';
+const VERSION = 'simu-v6';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));

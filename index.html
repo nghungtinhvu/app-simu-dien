@@ -19,7 +19,8 @@
    LAYOUT: canvas toàn màn hình, thanh công cụ dưới, thư viện trái, thuộc tính phải. */
 :root{color-scheme:dark;--bg:#111214;--panel:#17191c;--line:#2a2d32;--ink:#e8eaed;--mut:#8b9098;--acc:#0f9b8e;--acc2:#14b8a6;--warn:#ff8a3d;--bad:#ef4444}
 *{box-sizing:border-box;min-width:0}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 Geist,system-ui,sans-serif;overflow:hidden}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 Geist,system-ui,sans-serif;overflow:hidden;overscroll-behavior:none}
+#ed{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 button,input,select{font:inherit;color:inherit}
 button{cursor:pointer}
 .hide{display:none!important}
@@ -73,7 +74,8 @@ button{cursor:pointer}
 .bar .ibtn.on{background:#0f3d38;color:#5eead4}
 .sw{width:22px;height:22px;border-radius:50%;border:2px solid #0000;cursor:pointer;flex:none}
 .sw.on{border-color:#fff}
-.swrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.swrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.bar .cyc{display:none;width:30px;height:30px}
+@media(max-width:700px){.bar .swrow{display:none}.bar .cyc{display:block}.bar .ibtn{min-width:34px;padding:0 4px}}
 /* palette */
 #pal{position:absolute;left:0;top:0;bottom:48px;width:260px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;z-index:3}
 #pal .s{padding:10px;border-bottom:1px solid var(--line)}
@@ -109,7 +111,12 @@ button{cursor:pointer}
 #mod h3{margin:0 0 12px}
 #mod input{width:100%;height:44px;border-radius:8px;border:1px solid var(--line);background:#111214;padding:0 12px;font-size:16px}
 #mod .row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
-@media(max-width:700px){#pal{width:100%;max-width:300px}.hint{display:none}#ins{left:12px;right:12px;width:auto;top:auto;bottom:60px}}
+#ins .ih{display:flex;align-items:center;gap:8px}#ins .ih h3{flex:1;margin:0}#ins .more{display:none;height:32px;font-size:12px;border:1px solid var(--line)}
+@media(max-width:700px){#pal{width:100%;max-width:300px}.hint{display:none}
+ #ins{left:8px;right:8px;width:auto;top:50px;bottom:auto;padding:8px 10px;max-height:60vh}
+ #ins .ih h3{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#ins .more{display:inline-grid}
+ #ins .ib{display:none}#ins.open .ib{display:block}#ins .row{margin-top:8px}#ins .row .btn{height:36px}
+ .top #mode{display:none}#log{bottom:56px;max-height:22vh}}
 </style>
 </head>
 <body>
@@ -508,11 +515,10 @@ def('plc',{name:'PLC mini 8DI / 4DO relay',cat:'plc',pre:'PLC',w:240,h:130,ia:1,
   else{const s={get:n=>n[0]==='I'?I[+n.slice(1)]:n[0]==='Q'?!!Q[+n.slice(1)]:n[0]==='M'?!!r.M[n]:n[0]==='T'?!!(r.T[n]&&r.T[n].done):!!(r.C[n]&&r.C[n].done)};
    for(const st of prog.st){const v=!!st.e(s);
     if(st.k==='T'){const t=r.T[st.id]=r.T[st.id]||{el:0,done:false};t.in=v;t.fn=st.fn;t.pt=st.pt;if(st.fn==='TON'&&!v){t.el=0;t.done=false}if(st.fn==='TOF'&&v){t.el=0;t.done=true}}
-    else if(st.k==='C'){const t=r.C[st.id]=r.C[st.id]||{n:0,prev:false,done:false};t.in=v;t.rs=!!st.rs(s);t.pv=st.pv;if(t.rs){t.n=0;t.done=false}}
+    else if(st.k==='C'){const t=r.C[st.id]=r.C[st.id]||{n:0,prev:false,done:false};t.rs=!!st.rs(s);t.pv=st.pv;if(t.rs){t.n=0}else if(v&&!t.prev){t.n++}t.prev=v;t.in=v;t.done=t.n>=t.pv}
     else{const set=x=>{if(st.id[0]==='Q')Q[+st.id.slice(1)]=x?1:0;else r.M[st.id]=x};if(st.k==='=')set(v);else if(v)set(st.k==='S')}}}
   r.Q=Q;r.q=Q.slice();return Q.join()!==old},
- tick:(c,r,dt)=>{let ch=false;for(const id in(r.T||{})){const t=r.T[id];if(t.fn==='TON'&&t.in&&!t.done){t.el+=dt;if(t.el>=t.pt){t.done=true;ch=true}}if(t.fn==='TOF'&&!t.in&&t.done){t.el+=dt;if(t.el>=t.pt){t.done=false;ch=true}}}
-  for(const id in(r.C||{})){const t=r.C[id];if(!t.rs&&t.in&&!t.prev){t.n++;if(!t.done&&t.n>=t.pv){t.done=true;ch=true}}t.prev=t.in}return ch},
+ tick:(c,r,dt)=>{let ch=false;for(const id in(r.T||{})){const t=r.T[id];if(t.fn==='TON'&&t.in&&!t.done){t.el+=dt;if(t.el>=t.pt){t.done=true;ch=true}}if(t.fn==='TOF'&&!t.in&&t.done){t.el+=dt;if(t.el>=t.pt){t.done=false;ch=true}}}return ch},
  draw:(c,r)=>{const I=r.i||[],Q=r.q||[];const err=r.err||plcCompile(c.params.prog).err;const st=!r.pw?'—':err?'ERR':r.stop?'STOP':'RUN';
   return R(0,0,240,130,'#dfe3e7','#8d959c',5)+strip(240,2,24)+strip(240,104,24)+R(6,30,228,16,'#0d8a8a','none',2)+Tx(12,41,'MINI PLC  8DI / 4DO RELAY  24VDC',7,'#fff','start',600)+
   [0,1,2,3,4,5,6,7].map(i=>`<circle cx="${65+i*22}" cy="56" r="3.5" fill="${I[i]?'#22c55e':'#2c3a30'}"/>`+Tx(65+i*22,18,'I'+i,7)).join('')+Tx(15,18,'L+',7)+Tx(35,18,'M',7)+
@@ -598,15 +604,15 @@ def('lvl61f',{name:'Rơ le phao điện 61F (cạn - đầy)',cat:'rl',pre:'K',w
 def('conv',{name:'Băng tải có cảm biến đầu/cuối',cat:'qt',pre:'CV',w:320,h:120,ia:1,st:{b:[],n:0},params:{motor:'',spawn:'3',speed:'15'},
  pdef:[['motor','Động cơ kéo băng','link',['motor3','motor1','motor6','motordc','pump3']],['spawn','Tự đưa hàng mỗi (s, 0 = bấm tay)','num'],['speed','Tốc độ (%/s)','num']],
  terms:[T('P1',50,0),T('P2',70,0),T('S1',250,0),T('S2',270,0)],
- conns:(c,r)=>{const o=[];const b=r.b||[];if(b.some(x=>x>=4&&x<=16))o.push(['P1','P2']);if(b.some(x=>x>=78&&x<=90))o.push(['S1','S2']);return o},
+ conns:(c,r)=>{const o=[];const b=r.b||[];if(b.some(x=>x>=-1&&x<=16))o.push(['P1','P2']);if(b.some(x=>x>=78&&x<=90))o.push(['S1','S2']);return o},
  down:r=>{r.b=r.b||[];if(!r.b.some(x=>x<14))r.b.push(0)},
  post:(c,r,X,dt)=>{const mc=P.comps.find(x=>x.label===c.params.motor);const m=mc&&sim.rt[mc.id];const run=!!(m&&m.run);const dir=m&&m.dir<0?-1:1;const f=mc&&X.vfdFor?X.vfdFor(mc):null;const k=f===null||f===undefined?1:f/50;
-  r.b=r.b||[];const st=b=>[b.some(x=>x>=4&&x<=16),b.some(x=>x>=78&&x<=90)].join();const before=st(r.b);
+  r.b=r.b||[];const st=b=>[b.some(x=>x>=-1&&x<=16),b.some(x=>x>=78&&x<=90)].join();const before=st(r.b);
   const v=run?dir*(+c.params.speed||15)*k:0;r.run=run;r.off=((r.off||0)+v*dt*3)%1000;
   if(run&&+c.params.spawn>0){r.sp=(r.sp||0)+dt;if(r.sp>=+c.params.spawn&&!r.b.some(x=>x<14)){r.b.push(0);r.sp=0}}
   r.b=r.b.map(x=>x+v*dt);const gone=r.b.filter(x=>x>100).length;if(gone){r.n=(r.n||0)+gone;X.log('i',`${c.label}: hàng thứ ${r.n} ra khỏi băng`)}r.b=r.b.filter(x=>x>=-2&&x<=100);
   if(st(r.b)!==before)X.dirty()},
- draw:(c,r)=>{const b=r.b||[],x=p=>20+p*2.6,off=r.off||0;const eB=b.some(v=>v>=78&&v<=90),sB=b.some(v=>v>=4&&v<=16);
+ draw:(c,r)=>{const b=r.b||[],x=p=>20+p*2.6,off=r.off||0;const eB=b.some(v=>v>=78&&v<=90),sB=b.some(v=>v>=-1&&v<=16);
   return R(0,0,320,120,'#1f2937','#4b5563',6)+R(14,70,292,14,'#111','#333',7)+`<path d="M22 70 H298 M22 84 H298" stroke="#374151" stroke-width="2" stroke-dasharray="8 6" stroke-dashoffset="${(-off).toFixed(1)}"/>`+
   [22,298].map(cx=>`<g transform="rotate(${(off*4).toFixed(1)} ${cx} 77)"><circle cx="${cx}" cy="77" r="9" fill="#6b7280"/><line x1="${cx-8}" y1="77" x2="${cx+8}" y2="77" stroke="#111" stroke-width="2"/></g>`).join('')+
   b.map(p=>R(x(p)-12,46,24,24,'#b45309','#78350f',2)+`<path d="M${x(p)-12} 58 h24" stroke="#78350f"/>`).join('')+
@@ -633,7 +639,7 @@ const LS='panelsim_projects_v1';
 let projects=[];try{projects=JSON.parse(localStorage.getItem(LS)||'[]')}catch(e){projects=[]}
 const persist=()=>{try{localStorage.setItem(LS,JSON.stringify(projects))}catch(e){}};
 let P=null; // current project {id,name,updated,comps,wires,ex?}
-let view={x:0,y:0,k:1},sel=null,pending=null,drag=null,locked=false,wcol='xám',undoS=[],redoS=[],sim=null,palOpen=false;
+let insOpen=false,view={x:0,y:0,k:1},sel=null,pending=null,drag=null,locked=false,wcol='xám',undoS=[],redoS=[],sim=null,palOpen=false;
 const comp=id=>P.comps.find(c=>c.id===id);
 const rot=(c,dx,dy)=>{let n=((c.rot||0)/90)%4;while(n-->0){[dx,dy]=[-dy,dx]}return[dx,dy]};
 const tpos=(c,t)=>{const ty=TY[c.type],d=ty.terms.find(x=>x.id===t);if(!d)return[c.x,c.y];const[dx,dy]=rot(c,d.x-ty.w/2,d.y-ty.h/2);return[c.x+ty.w/2+dx,c.y+ty.h/2+dy]};
@@ -661,13 +667,14 @@ const isShort=s=>{if(!s)return false;const ph=[...s].filter(phases);const hot=ph
 const hasPE=s=>s&&s.has('PE');
 const shorts=N=>Object.keys(N.pots).filter(n=>isShort(N.pots[n]));
 const mainPot=s=>{if(!s||!s.size)return null;for(const p of['L1','L2','L3','T1','+24','N','T0','PE','0V'])if(s.has(p))return p;return null};
-function makeX(N,rt){
- const pot=(cid,t)=>mainPot(N.pots[N.net[cid+':'+t]]);
- const V=(cid,a,b)=>{const sa=N.pots[N.net[cid+':'+a]]||new Set(),sb=N.pots[N.net[cid+':'+b]]||new Set();const pa=mainPot(sa),pb=mainPot(sb);
+function Vsets(sa,sb){sa=sa||new Set();sb=sb||new Set();const pa=mainPot(sa),pb=mainPot(sb);
   if(phases(pa)&&phases(pb))return pa===pb?{v:0,k:'AC'}:{v:400,k:'AC'};
   if(phases(pa)&&(sb.has('N')||sb.has('PE'))||phases(pb)&&(sa.has('N')||sa.has('PE')))return{v:230,k:'AC'};
   if(sa.has('T1')&&sb.has('T0')||sb.has('T1')&&sa.has('T0'))return{v:230,k:'AC'};
-  if(sa.has('+24')&&sb.has('0V'))return{v:24,k:'DC'};if(sb.has('+24')&&sa.has('0V'))return{v:-24,k:'DC'};return{v:0,k:''}};
+  if(sa.has('+24')&&sb.has('0V'))return{v:24,k:'DC'};if(sb.has('+24')&&sa.has('0V'))return{v:-24,k:'DC'};return{v:0,k:''}}
+function makeX(N,rt){
+ const pot=(cid,t)=>mainPot(N.pots[N.net[cid+':'+t]]);
+ const V=(cid,a,b)=>Vsets(N.pots[N.net[cid+':'+a]],N.pots[N.net[cid+':'+b]]);
  return{pot,V,net:(cid,t)=>N.net[cid+':'+t],
   coil:(c,a,b,spec)=>{const v=V(c.id,a,b);if(spec==='24VDC'){if(v.k==='AC'&&v.v)return'burn';return Math.abs(v.v)===24?'on':'off'}if(v.k==='AC'&&v.v===230)return'on';if(v.k==='AC'&&v.v===400)return'burn';return'off'},
   log:(t,m)=>simLog(t,m),dirty:()=>{sim.dirty=1},
@@ -778,8 +785,8 @@ function render(){
    `<path d="${d}" class="wire" stroke="#0008" stroke-width="5"/><path d="${d}" class="wire" stroke="${flow?flow:col}" stroke-width="3"/>`+(flow?`<path d="${d}" class="flow" stroke="#fff8" stroke-width="1.6"/>`:'')+`</g>`}
  for(const c of P.comps)for(const t of TY[c.type].terms){const[x,y]=tpos(c,t.id);let f='#b8c0c8';if(N){const mp=mainPot(N.pots[N.net[c.id+':'+t.id]]);if(mp)f=POTC[mp]}
   h+=`<g class="term" data-c="${c.id}" data-t="${t.id}"><circle cx="${x}" cy="${y}" r="9" fill="transparent"/><circle class="o" cx="${x}" cy="${y}" r="5.5" fill="${f}" stroke="#4b535b" stroke-width="1.2"/><path d="M${x-3} ${y}h6M${x} ${y-3}v6" stroke="#4b535b" stroke-width="1"/></g>`}
- if(sel&&sel.w&&!sim){const L=RF.get(sel.w);if(L){for(let k=0;k<L.length-1;k++){const a=L[k],b=L[k+1];if(same(a,b))continue;h+=`<path d="M${a[0]} ${a[1]} L${b[0]} ${b[1]}" data-seg="${k}" stroke="transparent" stroke-width="14" style="cursor:${a[1]===b[1]?'ns-resize':'ew-resize'}"/>`}
-  for(let k=1;k<L.length-1;k++)h+=`<rect data-wv="${k}" x="${L[k][0]-5}" y="${L[k][1]-5}" width="10" height="10" rx="2" fill="#0e7490" stroke="#a5f3fc" stroke-width="1.5" style="cursor:move"/>`}}
+ if(sel&&sel.w&&!sim){const L=RF.get(sel.w);if(L){for(let k=0;k<L.length-1;k++){const a=L[k],b=L[k+1];if(same(a,b))continue;h+=`<path d="M${a[0]} ${a[1]} L${b[0]} ${b[1]}" data-seg="${k}" stroke="transparent" stroke-width="22" style="cursor:${a[1]===b[1]?'ns-resize':'ew-resize'}"/>`}
+  for(let k=1;k<L.length-1;k++)h+=`<g data-wv="${k}" style="cursor:move"><circle cx="${L[k][0]}" cy="${L[k][1]}" r="13" fill="transparent"/><rect x="${L[k][0]-5}" y="${L[k][1]-5}" width="10" height="10" rx="2" fill="#0e7490" stroke="#a5f3fc" stroke-width="1.5"/></g>`}}
  if(pending){const c=comp(pending.a.c);const p=tpos(c,pending.a.t);const pts=[p,...pending.pts,pending.m];let q=p,d='M'+p.join(' ');for(const x of pts.slice(1)){d+=` L${x[0]} ${q[1]} L${x[0]} ${x[1]}`;q=x}
   h+=`<path d="${d}" class="wire" stroke="${WCOL[wcol]}" stroke-width="3" stroke-dasharray="6 4" pointer-events="none"/>`}
  W.innerHTML=h;
@@ -790,25 +797,27 @@ function ui(){
  const b=$('#bar');const sw=Object.entries(WCOL).map(([k,v])=>`<button class="sw ${k===wcol?'on':''}" data-col="${k}" style="background:${v}" title="Dây ${k}" aria-label="Màu dây ${k}"></button>`).join('');
  if(sim){b.innerHTML=`<button class="ibtn" id="bStop" title="Dừng mô phỏng">${ic('stop')}</button><button class="ibtn ${sim.paused?'on':''}" id="bPause" title="Tạm dừng / tiếp tục">${ic(sim.paused?'play':'pause')}</button><button class="ibtn" id="bRestart" title="Chạy lại từ đầu">${ic('reset')}</button><button class="ibtn" id="bFit" title="Vừa màn hình">${ic('fit')}</button>`;
   $('#mode').textContent=sim.paused?'Tạm dừng':'Đang mô phỏng';$('#mode').className='chip '+(sim.paused?'pause':'run');$('#hint').textContent='Bấm nút nhấn, CB, công tắc để điều khiển. Giữ chuột trên nút nhấn để nhấn giữ.';$('#cv').classList.add('sim');$('#pal').classList.add('hide');$('#ins').classList.add('hide')}
- else{b.innerHTML=`<button class="ibtn" id="bBack" title="Về danh sách">${ic('back')}</button><span class="sep"></span><button class="ibtn ${palOpen?'on':''}" id="bAdd" title="Thêm linh kiện">${ic('plus')}</button><button class="ibtn" id="bRun" title="Chạy mô phỏng">${ic('play')}</button><button class="ibtn" id="bFit" title="Vừa màn hình">${ic('fit')}</button><button class="ibtn ${locked?'on':''}" id="bLock" title="Khóa vị trí linh kiện">${ic(locked?'lock':'unlock')}</button><span class="sep"></span><div class="swrow">${sw}</div><span style="flex:1"></span><button class="ibtn" id="bUndo" title="Hoàn tác (Ctrl+Z)">${ic('undo')}</button><button class="ibtn" id="bRedo" title="Làm lại (Ctrl+Y)">${ic('redo')}</button>`;
+ else{b.innerHTML=`<button class="ibtn" id="bBack" title="Về danh sách">${ic('back')}</button><span class="sep"></span><button class="ibtn ${palOpen?'on':''}" id="bAdd" title="Thêm linh kiện">${ic('plus')}</button><button class="ibtn" id="bRun" title="Chạy mô phỏng">${ic('play')}</button><button class="ibtn" id="bFit" title="Vừa màn hình">${ic('fit')}</button><button class="ibtn ${locked?'on':''}" id="bLock" title="Khóa vị trí linh kiện">${ic(locked?'lock':'unlock')}</button><span class="sep"></span><div class="swrow">${sw}</div><button class="sw on cyc" data-cyc="1" style="background:${WCOL[wcol]}" aria-label="Đổi màu dây (đang: ${wcol})"></button><span style="flex:1"></span><button class="ibtn" id="bUndo" title="Hoàn tác (Ctrl+Z)">${ic('undo')}</button><button class="ibtn" id="bRedo" title="Làm lại (Ctrl+Y)">${ic('redo')}</button>`;
   $('#mode').textContent='Chế độ lắp ráp';$('#mode').className='chip';$('#hint').textContent=pending?'Bấm cực khác để nối, bấm nền để bẻ góc, Esc để hủy':'Bấm vào cực (chấm tròn) để bắt đầu đi dây. Kéo nền để di chuyển, cuộn để phóng to.';$('#cv').classList.remove('sim');$('#pal').classList.toggle('hide',!palOpen)}$('#ed').classList.toggle('po',palOpen&&!sim)}
 $('#bar').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
+ if(t.dataset.cyc){const ks=Object.keys(WCOL);wcol=ks[(ks.indexOf(wcol)+1)%ks.length];if(sel&&sel.w){const w=P.wires.find(x=>x.id===sel.w);if(w){snapUndo();w.color=wcol;save()}}ui();render();return}
  if(t.dataset.col){wcol=t.dataset.col;if(sel&&sel.w){const w=P.wires.find(x=>x.id===sel.w);if(w){snapUndo();w.color=wcol;save()}}ui();render();return}
  ({bBack:()=>openHome(),bAdd:()=>{palOpen=!palOpen;ui()},bRun:startSim,bStop:stopSim,bPause:()=>{sim.paused=sim.paused?0:1;if(!sim.paused&&sim.fault){stopSim();startSim();return}ui()},bRestart:()=>{stopSim();startSim()},bFit:fit,bLock:()=>{locked=!locked;ui()},bUndo:undo,bRedo:redo}[t.id]||(()=>{}))()});
 
 function ins(){
  const I=$('#ins');if(!sel||sim){I.classList.add('hide');return}I.classList.remove('hide');if(I.contains(document.activeElement)&&I.dataset.sel===JSON.stringify(sel))return;I.dataset.sel=JSON.stringify(sel);
  if(sel.w){const w=P.wires.find(x=>x.id===sel.w);if(!w){sel=null;I.classList.add('hide');return}
-  I.innerHTML=`<h3>Dây dẫn</h3><p class="k">${esc(comp(w.a.c).label)} : ${esc(w.a.t)} → ${esc(comp(w.b.c).label)} : ${esc(w.b.t)}</p><p class="k" style="margin-top:-6px">Kéo một đoạn để dời song song, kéo ô vuông để dời điểm uốn. Nhấp đúp lên dây để thêm điểm, nhấp đúp lên ô vuông để xóa điểm.</p><label>Màu dây</label><div class="swrow">${Object.entries(WCOL).map(([k,v])=>`<button class="sw ${k===w.color?'on':''}" data-wc="${k}" style="background:${v}" aria-label="${k}"></button>`).join('')}</div><div class="row">${w.pts&&w.pts.length?'<button class="btn ghost" id="iStr">Đi lại tự động</button>':''}<button class="btn danger" id="iDel">${ic('trash',16)}Xóa</button></div>`;return}
+  I.innerHTML=`<div class="ih"><h3>Dây dẫn</h3><button class="ibtn more" id="iMore">${insOpen?"Thu gọn":"Màu & hướng dẫn"}</button></div><div class="ib"><p class="k">${esc(comp(w.a.c).label)} : ${esc(w.a.t)} → ${esc(comp(w.b.c).label)} : ${esc(w.b.t)}</p><p class="k" style="margin-top:-6px">Kéo một đoạn để dời song song, kéo ô vuông để dời điểm uốn. Nhấp đúp (điện thoại: chạm đúp) lên dây để thêm điểm, lên ô vuông để xóa điểm.</p><label>Màu dây</label><div class="swrow">${Object.entries(WCOL).map(([k,v])=>`<button class="sw ${k===w.color?'on':''}" data-wc="${k}" style="background:${v}" aria-label="${k}"></button>`).join('')}</div></div><div class="row">${w.pts&&w.pts.length?'<button class="btn ghost" id="iStr">Đi lại tự động</button>':''}<button class="btn danger" id="iDel">${ic('trash',16)}Xóa</button></div>`;return}
  const c=comp(sel.c);if(!c){sel=null;I.classList.add('hide');return}const ty=TY[c.type];
- I.innerHTML=`<h3>${esc(ty.name)}</h3><p class="k">${CATS.find(x=>x[0]===ty.cat)[1]}</p><label for="iLab">Ký hiệu</label><input id="iLab" value="${esc(c.label)}">`+
+ I.innerHTML=`<div class="ih"><h3>${esc(c.label)} · ${esc(ty.name)}</h3><button class="ibtn more" id="iMore" aria-expanded="${insOpen}">${insOpen?"Thu gọn":"Thuộc tính"}</button></div><div class="ib"><p class="k">${CATS.find(x=>x[0]===ty.cat)[1]}</p><label for="iLab">Ký hiệu</label><input id="iLab" value="${esc(c.label)}">`+
   ty.pdef.map(([k,l,o,lt])=>`<label for="ip_${k}">${l}</label>`+(o==='num'?`<input id="ip_${k}" data-p="${k}" type="number" min="0" step="0.5" value="${esc(c.params[k])}">`
    :o==='code'?`<textarea id="ip_${k}" data-p="${k}" spellcheck="false" rows="9">${esc(c.params[k])}</textarea><pre class="perr ${plcCompile(c.params[k]).err?'bad':''}" id="perr">${esc(plcCompile(c.params[k]).err||'✓ Chương trình hợp lệ')}</pre><details class="phelp"><summary>Cú pháp</summary><p>Mỗi dòng một lệnh, thực hiện từ trên xuống như ladder.<br><b>Q0 = (I0 | Q0) & !I1</b> — gán (| hoặc, & và, ! phủ định)<br><b>S Q1 = I2</b> / <b>R Q1 = I3</b> — set / reset<br><b>T0 = TON(I4, 5)</b> — timer trễ đóng 5 s (TOF: trễ mở)<br><b>C0 = CTU(I5, I6, 3)</b> — đếm xung I5, reset I6, đặt 3<br>Biến: I0–I7, Q0–Q3, M0–M31, T0–T7, C0–C7. Ghi chú: //</p></details>`
    :o==='link'?`<select id="ip_${k}" data-p="${k}"><option value="">— chọn —</option>${P.comps.filter(x=>lt.includes(x.type)).map(x=>`<option ${x.label===c.params[k]?'selected':''}>${esc(x.label)}</option>`).join('')}</select>`
    :`<select id="ip_${k}" data-p="${k}">${o.map(v=>`<option ${v===c.params[k]?'selected':''}>${v}</option>`).join('')}</select>`)).join('')+
-  `<div class="row"><button class="btn ghost" id="iRot" title="Xoay 90° (phím R)">${ic('rot',16)}Xoay</button><button class="btn ghost" id="iDup">${ic('copy',16)}Nhân bản</button><button class="btn danger" id="iDel" aria-label="Xóa">${ic('trash',16)}</button></div>`}
+  `</div><div class="row"><button class="btn ghost" id="iRot" title="Xoay 90° (phím R)">${ic('rot',16)}Xoay</button><button class="btn ghost" id="iDup">${ic('copy',16)}Nhân bản</button><button class="btn danger" id="iDel" aria-label="Xóa">${ic('trash',16)}</button></div>`}
 $('#ins').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)return;
  if(t.dataset.wc){const w=P.wires.find(x=>x.id===sel.w);snapUndo();w.color=t.dataset.wc;save();render();return}
+ if(t.id==='iMore'){insOpen=!insOpen;$('#ins').classList.toggle('open',insOpen);$('#ins').dataset.sel='';ins();return}
  if(t.id==='iDel')delSel();if(t.id==='iDup')dup();if(t.id==='iRot')rotSel();if(t.id==='iStr'){const w=P.wires.find(x=>x.id===sel.w);snapUndo();w.pts=[];save();render()}});
 $('#ins').addEventListener('input',e=>{if(e.target.tagName==='TEXTAREA'){const pe=$('#perr');const er=plcCompile(e.target.value).err;pe.textContent=er||'✓ Chương trình hợp lệ';pe.classList.toggle('bad',!!er)}});
 $('#ins').addEventListener('change',e=>{const c=sel&&sel.c&&comp(sel.c);if(!c)return;snapUndo();if(e.target.id==='iLab')c.label=e.target.value.trim()||c.label;else if(e.target.dataset.p)c.params[e.target.dataset.p]=e.target.value;save();render()});
@@ -830,12 +839,22 @@ $('#cv').addEventListener('drop',e=>{e.preventDefault();const k=e.dataTransfer.g
 // ====================== pointer interaction ======================
 const cv=$('#cv');
 const toW=e=>{const r=cv.getBoundingClientRect();return[(e.clientX-r.left-view.x)/view.k,(e.clientY-r.top-view.y)/view.k]};
-let pressed=null;
+let pressed=null,lastTap=null;
+// chọn đúng vật dưới ngón tay (bỏ cơ chế tự hút điểm chạm của trình duyệt di động)
+function pick(e){let el=e.target;if(e.pointerType==='mouse')return el;el=document.elementFromPoint(e.clientX,e.clientY)||el;
+ if(!el.closest||el.closest('[data-t],[data-wv],[data-seg]'))return el;const onWire=el.closest('[data-w]');const lim=onWire?5:12;const r=cv.getBoundingClientRect();let best=null;
+ for(const c of P.comps)for(const t of TY[c.type].terms){const[x,y]=tpos(c,t.id);const d=Math.hypot(r.left+view.x+x*view.k-e.clientX,r.top+view.y+y*view.k-e.clientY);if(d<=lim&&(!best||d<best[0]))best=[d,c.id,t.id]}
+ if(best){const q=cv.querySelector(`[data-c="${best[1]}"][data-t="${CSS.escape(best[2])}"]`);if(q)return q}return el}
+cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catch(er){}
+ if(e.pointerType!=='mouse'&&e.isPrimary){const t=performance.now();if(lastTap&&t-lastTap.t<350&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<24){lastTap=null;if(onDbl(e)){e.stopImmediatePropagation();return}}else lastTap={t,x:e.clientX,y:e.clientY}}},true);
+cv.addEventListener('touchstart',e=>{if(e.touches.length>1||!e.target.closest('input,textarea,select'))e.preventDefault()},{passive:false});
+cv.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+addEventListener('pointercancel',()=>{if(drag&&drag.moved)save();drag=null;if(pressed&&sim){const ty=TY[pressed.type];if(ty.up)ty.up(sim.rt[pressed.id]);solve();render()}pressed=null});
 cv.addEventListener('pointerdown',e=>{
- const tEl=e.target.closest('[data-t]'),cEl=e.target.closest('[data-c]'),wEl=e.target.closest('[data-w]');const[x,y]=toW(e);
+ const tg=pick(e);const tEl=tg.closest('[data-t]'),cEl=tg.closest('[data-c]'),wEl=tg.closest('[data-w]');const[x,y]=toW(e);
  if(e.button===1||e.button===2){drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};if(e.button===2&&pending){pending=null;ui();render()}return}
  if(sim){if(cEl&&!tEl){const c=comp(cEl.dataset.c),ty=TY[c.type];if(ty.down){ty.down(sim.rt[c.id]);pressed=c;solve();render()}return}drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};return}
- const wv=e.target.closest('[data-wv]'),sgm=e.target.closest('[data-seg]');
+ const wv=tg.closest('[data-wv]'),sgm=tg.closest('[data-seg]');
  if(!pending&&sel&&sel.w&&(wv||sgm)){const w=P.wires.find(q=>q.id===sel.w);const L0=routeOf(w).map(p=>p.slice());drag=wv?{wv:+wv.dataset.wv,w,L0,sx:x,sy:y,moved:0}:{seg:+sgm.dataset.seg,w,L0,sx:x,sy:y,moved:0};return}
  if(tEl){const a={c:tEl.dataset.c,t:tEl.dataset.t};
   if(!pending){pending={a,pts:[],m:[x,y],sx:e.clientX,sy:e.clientY};sel=null}
@@ -847,10 +866,11 @@ cv.addEventListener('pointerdown',e=>{
  if(wEl){sel={w:wEl.dataset.w};wcol=P.wires.find(w=>w.id===sel.w).color;ui();render();return}
  drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y,des:1}});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
-cv.addEventListener('dblclick',e=>{if(sim||!sel||!sel.w)return;const w=P.wires.find(q=>q.id===sel.w);if(!w)return;const wv=e.target.closest('[data-wv]'),sgm=e.target.closest('[data-seg]');const[x,y]=toW(e);
+function onDbl(e){if(sim||!sel||!sel.w)return false;const w=P.wires.find(q=>q.id===sel.w);if(!w)return;const tg=pick(e);const wv=tg.closest('[data-wv]'),sgm=tg.closest('[data-seg]');const[x,y]=toW(e);
  if(wv){snapUndo();const L=materialize(w);w.pts.splice(+wv.dataset.wv-1,1);tidy(w)}
  else if(sgm){snapUndo();const k=+sgm.dataset.seg;const L=materialize(w);const a=L[k];const p=a[1]===L[k+1][1]?[snap(x),a[1]]:[a[0],snap(y)];w.pts.splice(k,0,p)}
- else return;routesDirty=true;save();render()});
+ else return false;routesDirty=true;save();render();return true}
+cv.addEventListener('dblclick',onDbl);
 const touches=new Map();let pinch=null;
 cv.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;touches.set(e.pointerId,[e.clientX,e.clientY]);if(touches.size===2){const[a,b]=[...touches.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),k:view.k,x:view.x,y:view.y,cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2};drag=null;pending=null;if(pressed&&sim){const ty=TY[pressed.type];if(ty.up)ty.up(sim.rt[pressed.id]);pressed=null}}},true);
 addEventListener('pointermove',e=>{if(!touches.has(e.pointerId))return;touches.set(e.pointerId,[e.clientX,e.clientY]);if(pinch&&touches.size===2){const[a,b]=[...touches.values()];const r=cv.getBoundingClientRect();const k=Math.min(3,Math.max(.2,pinch.k*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch.d));const cx=(a[0]+b[0])/2-r.left,cy=(a[1]+b[1])/2-r.top,ox=pinch.cx-r.left,oy=pinch.cy-r.top;view.k=k;view.x=cx-(ox-pinch.x)*k/pinch.k;view.y=cy-(oy-pinch.y)*k/pinch.k;render()}},true);
@@ -869,7 +889,7 @@ addEventListener('pointermove',e=>{
  const nx=snap(x-drag.ox),ny=snap(y-drag.oy);if(nx!==drag.c.x||ny!==drag.c.y){if(!drag.moved){snapUndo();drag.moved=1}drag.c.x=nx;drag.c.y=ny;routesDirty=true;render()}});
 addEventListener('pointerup',e=>{
  if(pressed){const ty=TY[pressed.type];if(ty.up&&sim){ty.up(sim.rt[pressed.id]);solve();render()}pressed=null}
- if(pending&&!sim){const tEl=e.target.closest&&e.target.closest('[data-t]');if(tEl&&Math.abs(e.clientX-pending.sx)+Math.abs(e.clientY-pending.sy)>8){const a={c:tEl.dataset.c,t:tEl.dataset.t};if(a.c!==pending.a.c||a.t!==pending.a.t){finishWire(a);ui();render()}}}
+ if(pending&&!sim){const hit=document.elementFromPoint(e.clientX,e.clientY);const tEl=hit&&hit.closest&&hit.closest('[data-t]');if(tEl&&Math.abs(e.clientX-pending.sx)+Math.abs(e.clientY-pending.sy)>8){const a={c:tEl.dataset.c,t:tEl.dataset.t};if(a.c!==pending.a.c||a.t!==pending.a.t){finishWire(a);ui();render()}}}
  if(drag){if(drag.moved&&drag.w){tidy(drag.w);routesDirty=true;render()}if(drag.moved)save();if(drag.des&&!sim){sel=null;render()}drag=null}});
 cv.addEventListener('wheel',e=>{e.preventDefault();const r=cv.getBoundingClientRect();const mx=e.clientX-r.left,my=e.clientY-r.top;const k=Math.min(3,Math.max(.2,view.k*Math.exp(-e.deltaY*.0015)));view.x=mx-(mx-view.x)*k/view.k;view.y=my-(my-view.y)*k/view.k;view.k=k;render()},{passive:false});
 function finishWire(b){snapUndo();let pts=[];if(pending.pts.length){const ca=comp(pending.a.c),cb=comp(b.c);const p1=tpos(ca,pending.a.t),d1=tside(ca,pending.a.t),p2=tpos(cb,b.t),d2=tside(cb,b.t);pts=[[p1[0]+d1[0]*20,p1[1]+d1[1]*20],...pending.pts,[p2[0]+d2[0]*20,p2[1]+d2[1]*20]]}const w={id:uid(),a:pending.a,b,pts,color:wcol,v3:1};P.wires.push(w);if(pts.length)tidy(w);pending=null;save()}
@@ -1013,7 +1033,7 @@ function openEd(){RC.clear();routesDirty=true;const ids=new Set();P.comps=P.comp
  $('#pname').value=P.name;undoS=[];redoS=[];sel=null;pending=null;pal();ui();fit()}
 function openHome(){if(sim)stopSim();P=null;palOpen=false;$('#ed').classList.add('hide');$('#home').classList.remove('hide');home()}
 home();
-window.EP={plcCompile,rotSel,routeOf,get P(){return P},get sim(){return sim},EX,TY,startSim,stopSim,tick,solve,openEx:i=>{const x=EX[i];P={id:'ex',name:x.name,updated:Date.now(),comps:[],wires:[],ex:1};x.build();openEd()},
+window.EP={plcCompile,rotSel,routeOf,vb:(l1,t1,l2,t2)=>{const N=sim.N,c1=P.comps.find(x=>x.label===l1),c2=P.comps.find(x=>x.label===l2);return Vsets(N.pots[N.net[c1.id+':'+t1]],N.pots[N.net[c2.id+':'+t2]])},conn:(l1,t1,l2,t2)=>{const N=sim.N,c1=P.comps.find(x=>x.label===l1),c2=P.comps.find(x=>x.label===l2);return N.net[c1.id+':'+t1]===N.net[c2.id+':'+t2]},get P(){return P},get sim(){return sim},EX,TY,startSim,stopSim,tick,solve,openEx:i=>{const x=EX[i];P={id:'ex',name:x.name,updated:Date.now(),comps:[],wires:[],ex:1};x.build();openEd()},
  press:(lab,dn)=>{const c=P.comps.find(x=>x.label===lab);const ty=TY[c.type];(dn?ty.down:(ty.up||(()=>{})))(sim.rt[c.id]);solve();render()},rt:lab=>sim.rt[P.comps.find(x=>x.label===lab).id]};
 }
 </script>

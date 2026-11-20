@@ -22,5 +22,8 @@ Sau lần mở đầu tiên, app chạy được cả khi mất mạng.
 ## Lưu ý
 Dự án được lưu trong trình duyệt của từng máy. Để chuyển sang máy khác: ở màn hình chính bấm nút xuất trên dự án, rồi dùng **Nhập dự án** ở máy kia.
 
+## Kiểm thử
+`python3 tests/run.py` chạy 228 phép kiểm tra logic cho cả 65 loại thiết bị (cần Playwright + Chromium).
+
 ## Cập nhật app
 Sửa `index.html`, đổi `VERSION` trong `sw.js` (ví dụ `simu-v3`) rồi commit — GitHub Pages tự đăng bản mới sau khoảng 1 phút.

@@ -278,14 +278,16 @@ def('timer_off',{name:'Timer trễ mở (off-delay)',cat:'rl',pre:'KT',w:90,h:11
  update:(c,r,X)=>{const ch=coilUpd('A1','A2')(c,r,X);if(r.on){r.el=0;if(!r.out){r.out=1;return true}}return ch},
  tick:(c,r,dt)=>{if(!r.on&&r.out){r.el=(r.el||0)+dt;if(r.el>=(+c.params.t||0)){r.out=0;return true}}return false},draw:tmrDraw('off')});
 
+const PBACT=['Nhấn nhả (thả tay tự trả về)','Nhấn giữ (bấm lần nữa mới nhả)'],pbLatch=c=>!!c&&String(c.params.act||'').startsWith('Nhấn giữ');
+const pbDown=(r,c)=>{if(pbLatch(c))r.p=r.p?0:1;else r.p=1},pbUp=(r,c)=>{if(!pbLatch(c))r.p=0};
 const pbDraw=(no)=>(c,r)=>{const col=c.params.color==='Xanh'?'#16a34a':c.params.color==='Đỏ'?'#dc2626':c.params.color==='Vàng'?'#eab308':'#d1d5db';const p=r.p;
  return R(0,0,60,90,'#25282c','#3e434a',8)+(p?R(-3,-3,66,96,'none','#22d3ee',10,'stroke-width="2.5"'):'')+`<circle cx="30" cy="45" r="21" fill="url(#scr)" stroke="#374151"/><circle cx="30" cy="45" r="17" fill="#111"/>`+
-  `<rect x="${p?17:15}" y="${p?32:30}" width="${p?26:30}" height="${p?26:30}" rx="${p?9:10}" fill="${col}" stroke="#0007" stroke-width="1.5"/>`+(p?'':`<path d="M18 36 h24" stroke="#fff" stroke-width="2" opacity=".35" stroke-linecap="round"/>`)+Tx(30,74,p?'ĐANG NHẤN':'NÚT NHẤN',5.5,p?'#67e8f9':'#6b7280','middle',700)+
+  `<rect x="${p?17:15}" y="${p?32:30}" width="${p?26:30}" height="${p?26:30}" rx="${p?9:10}" fill="${col}" stroke="#0007" stroke-width="1.5"/>`+(p?'':`<path d="M18 36 h24" stroke="#fff" stroke-width="2" opacity=".35" stroke-linecap="round"/>`)+Tx(30,74,p?(pbLatch(c)?'ĐANG GIỮ':'ĐANG NHẤN'):(pbLatch(c)?'NHẤN GIỮ':'NHẤN NHẢ'),5.5,p?'#67e8f9':'#6b7280','middle',700)+
   Tx(54,12,no?'3':'1',7,'#bbb','end')+Tx(54,84,no?'4':'2',7,'#bbb','end')+tag(c.label,30,13)+Tx(6,84,no?'NO':'NC',6,'#888','start')};
-def('pb_no',{name:'Nút nhấn thường mở (NO)',cat:'dk',pre:'S',w:60,h:90,dark:1,ia:1,params:{color:'Xanh'},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng']]],
- terms:[T('3',30,0),T('4',30,90)],conns:(c,r)=>r.p?[['3','4']]:[],down:r=>{r.p=1},up:r=>{r.p=0},draw:pbDraw(1)});
-def('pb_nc',{name:'Nút nhấn thường đóng (NC)',cat:'dk',pre:'S',w:60,h:90,dark:1,ia:1,params:{color:'Đỏ'},pdef:[['color','Màu',['Đỏ','Xanh','Vàng','Trắng']]],
- terms:[T('1',30,0),T('2',30,90)],conns:(c,r)=>r.p?[]:[['1','2']],down:r=>{r.p=1},up:r=>{r.p=0},draw:pbDraw(0)});
+def('pb_no',{name:'Nút nhấn thường mở (NO)',cat:'dk',pre:'S',w:60,h:90,dark:1,ia:1,params:{color:'Xanh',act:PBACT[0]},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng']],['act','Kiểu tác động',PBACT]],
+ terms:[T('3',30,0),T('4',30,90)],conns:(c,r)=>r.p?[['3','4']]:[],down:pbDown,up:pbUp,draw:pbDraw(1)});
+def('pb_nc',{name:'Nút nhấn thường đóng (NC)',cat:'dk',pre:'S',w:60,h:90,dark:1,ia:1,params:{color:'Đỏ',act:PBACT[0]},pdef:[['color','Màu',['Đỏ','Xanh','Vàng','Trắng']],['act','Kiểu tác động',PBACT]],
+ terms:[T('1',30,0),T('2',30,90)],conns:(c,r)=>r.p?[]:[['1','2']],down:pbDown,up:pbUp,draw:pbDraw(0)});
 def('estop2',{name:'Nút dừng khẩn 2 tiếp điểm NC (11-12, 21-22)',cat:'dk',pre:'S',w:80,h:100,ia:1,
  terms:[T('11',20,0),T('21',60,0),T('12',20,100),T('22',60,100)],conns:(c,r)=>r.p?[]:[['11','12'],['21','22']],down:r=>{r.p=r.p?0:1},
  draw:(c,r)=>R(0,0,80,100,'#f1c40f','#a8870a',8)+`<circle cx="40" cy="50" r="26" fill="#d4a80c"/><circle cx="40" cy="50" r="${r.p?17:21}" fill="${r.p?'#991b1b':'#dc2626'}"/>`+Tx(40,92,r.p?'ĐÃ NHẤN (xoay để nhả)':'2 NC',6,'#3a2e00','middle',600)+Tx(20,11,'11',6,'#3a2e00')+Tx(60,11,'21',6,'#3a2e00')+tag(c.label,40,24)});
@@ -298,14 +300,14 @@ def('sel',{name:'Công tắc xoay 2 vị trí',cat:'dk',pre:'S',w:60,h:90,dark:1
 
 def('lamp',{name:'Đèn báo',cat:'bh',pre:'H',w:56,h:86,dark:1,at:['X1'],cur:(c,r)=>r.lit?(c.params.v==='24VDC'?.05:.02):0,params:{color:'Xanh',v:'230VAC'},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng','Lam']],['v','Điện áp',COIL_OPTS]],
  terms:[T('X1',28,0),T('X2',28,86)],
- post:(c,r,X)=>{if(r.burnt){r.lit=0;return}const s=X.coil(c,'X1','X2',c.params.v);if(s==='burn'){r.burnt=1;X.log('e',`${c.label}: cháy bóng đèn (sai điện áp)`)}r.lit=s==='on'},
+ post:(c,r,X)=>{const vv=X.V(c.id,'X1','X2');r.vv=vv.v?Math.abs(vv.v)+(vv.k==='AC'?' V AC':' V DC'):'0 V';if(r.burnt){r.lit=0;return}const s=X.coil(c,'X1','X2',c.params.v);if(s==='burn'){r.burnt=1;X.log('e',`${c.label}: cháy bóng đèn (sai điện áp)`)}r.lit=s==='on'},
  draw:(c,r)=>{const col={Xanh:'#22c55e',Đỏ:'#ef4444',Vàng:'#facc15',Trắng:'#f8fafc',Lam:'#3b82f6'}[c.params.color];
   const on=r.lit&&!r.burnt;
-  return R(0,0,56,86,'#25282c','#3e434a',8)+(on?`<circle cx="28" cy="45" r="34" fill="${col}" filter="url(#glow)" opacity=".75"/><circle cx="28" cy="45" r="24" fill="${col}" opacity=".35"/>`:'')+
+  return R(0,0,56,86,on?'#3a3f2a':'#1d2024',on?col:'#3e434a',8,on?'stroke-width="2"':'')+(on?`<circle cx="28" cy="45" r="34" fill="${col}" filter="url(#glow)" opacity=".75"/><circle cx="28" cy="45" r="24" fill="${col}" opacity=".35"/>`:'')+
   `<circle cx="28" cy="45" r="18" fill="#0b0c0e" stroke="#6b7280" stroke-width="1.5"/>`+
   (on?`<circle cx="28" cy="45" r="15" fill="${col}"/><circle cx="28" cy="45" r="9" fill="#fff" opacity=".55"/><circle cx="23" cy="40" r="4" fill="#fff" opacity=".8"/>`
      :`<circle cx="28" cy="45" r="15" fill="${r.burnt?'#1a1a1a':'#1c1f24'}"/><circle cx="28" cy="45" r="15" fill="none" stroke="${col}" stroke-width="2" opacity=".35"/><path d="M19 38 a12 12 0 0 1 10 -6" stroke="#fff" stroke-width="2" opacity=".18" fill="none"/>`)+
-  Tx(28,74,r.burnt?'CHÁY':on?'SÁNG':'TẮT',7,r.burnt?'#ef4444':on?col:'#6b7280','middle',800)+(r.burnt?Tx(28,49,'×',13,'#ef4444'):'')+Tx(53,10,'X1',6,'#aaa','end')+Tx(53,84,'X2',6,'#aaa','end')+tag(c.label,28,14)}});
+  (on?R(10,67,36,11,col,'none',5)+Tx(28,75.5,'SÁNG',7,'#111','middle',800):Tx(28,75,r.burnt?'CHÁY':'TẮT',7,r.burnt?'#ef4444':'#6b7280','middle',800))+(r.vv?Tx(60,48,r.vv,6.5,r.vv==='0 V'?'#6b7280':'#fde68a','start',700):'')+(r.burnt?Tx(28,49,'×',13,'#ef4444'):'')+Tx(53,10,'X1',6,'#aaa','end')+Tx(53,84,'X2',6,'#aaa','end')+tag(c.label,28,14)}});
 def('buzzer',{name:'Còi báo',cat:'bh',pre:'H',w:56,h:86,dark:1,at:['X1'],cur:(c,r)=>r.lit?(c.params.v==='24VDC'?.05:.02):0,params:{v:'230VAC'},pdef:[['v','Điện áp',COIL_OPTS]],
  terms:[T('X1',28,0),T('X2',28,86)],post:(c,r,X)=>{r.lit=pwrOk(c,r,X,X.coil(c,'X1','X2',c.params.v),'còi')},
  draw:(c,r)=>R(0,0,56,86,'#25282c','#3e434a',8)+`<circle cx="28" cy="43" r="17" fill="#111"/>`+[0,1,2].map(i=>`<circle cx="28" cy="43" r="${5+i*4}" fill="none" stroke="${r.lit?'#f59e0b':'#444'}" stroke-width="1.5"/>`).join('')+(r.lit?Tx(28,74,'BEEP',7,'#f59e0b','middle',700):'')+tag(c.label,28,14)});
@@ -566,8 +568,8 @@ def('tmr8',{name:'Timer 8 chân đa chế độ (H3CR-A8)',cat:'rl',pre:'KT',w:1
   [['8','C'],['7','−'],['6','NO'],['5','NC']].map(([n,f],i)=>Tx(15+i*30,104,f,5,'#555')+Tx(15+i*30,115,n,8,'#111','middle',700)).join('')+tag(c.label,60,-12)}});
 
 // ---------- thiết bị điều khiển ----------
-def('pb2',{name:'Nút nhấn kép 1NO + 1NC',cat:'dk',pre:'S',w:80,h:90,dark:1,ia:1,params:{color:'Xanh'},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng']]],
- terms:[T('13',20,0),T('21',60,0),T('14',20,90),T('22',60,90)],conns:(c,r)=>r.p?[['13','14']]:[['21','22']],down:r=>{r.p=1},up:r=>{r.p=0},
+def('pb2',{name:'Nút nhấn kép 1NO + 1NC',cat:'dk',pre:'S',w:80,h:90,dark:1,ia:1,params:{color:'Xanh',act:PBACT[0]},pdef:[['color','Màu',['Xanh','Đỏ','Vàng','Trắng']],['act','Kiểu tác động',PBACT]],
+ terms:[T('13',20,0),T('21',60,0),T('14',20,90),T('22',60,90)],conns:(c,r)=>r.p?[['13','14']]:[['21','22']],down:pbDown,up:pbUp,
  draw:(c,r)=>{const col={Xanh:'#22c55e',Đỏ:'#ef4444',Vàng:'#facc15',Trắng:'#e5e7eb'}[c.params.color];return R(0,0,80,90,'#25282c','#3e434a',8)+(r.p?R(-3,-3,86,96,'none','#22d3ee',10,'stroke-width="2.5"'):'')+`<circle cx="40" cy="47" r="21" fill="#111"/><circle cx="40" cy="47" r="${r.p?15:18}" fill="${col}"/>`+Tx(8,12,'13',6,'#bbb','start')+Tx(72,12,'21',6,'#bbb','end')+Tx(8,86,'14',6,'#bbb','start')+Tx(72,86,'22',6,'#bbb','end')+tag(c.label,40,13)}});
 def('sel3',{name:'Công tắc xoay 3 vị trí 1-0-2',cat:'dk',pre:'S',w:80,h:90,dark:1,ia:1,
  terms:[T('13',20,0),T('23',60,0),T('14',20,90),T('24',60,90)],conns:(c,r)=>r.pos===1?[['13','14']]:r.pos===2?[['23','24']]:[],down:r=>{r.pos=((r.pos||0)+1)%3},
@@ -1125,11 +1127,11 @@ cv.addEventListener('pointerdown',e=>{try{cv.setPointerCapture(e.pointerId)}catc
  if(e.pointerType!=='mouse'&&e.isPrimary){const t=performance.now();if(lastTap&&t-lastTap.t<350&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<24){lastTap=null;if(onDbl(e)){e.stopImmediatePropagation();return}}else lastTap={t,x:e.clientX,y:e.clientY}}},true);
 cv.addEventListener('touchstart',e=>{if(e.touches.length>1||!e.target.closest('input,textarea,select'))e.preventDefault()},{passive:false});
 cv.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
-addEventListener('pointercancel',()=>{if(drag&&drag.moved)save();drag=null;if(pressed&&sim){const ty=TY[pressed.type];if(ty.up)ty.up(sim.rt[pressed.id]);solve();render()}pressed=null});
+addEventListener('pointercancel',()=>{if(drag&&drag.moved)save();drag=null;if(pressed&&sim){const ty=TY[pressed.type];if(ty.up)ty.up(sim.rt[pressed.id],pressed);solve();render()}pressed=null});
 cv.addEventListener('pointerdown',e=>{
  const tg=pick(e);const tEl=tg.closest('[data-t]'),cEl=tg.closest('[data-c]'),wEl=tg.closest('[data-w]');const[x,y]=toW(e);
  if(e.button===1||e.button===2){drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};if(e.button===2&&pending){pending=null;ui();render()}return}
- if(sim){if(cEl&&!tEl){const c=comp(cEl.dataset.c),ty=TY[c.type];if(ty.down){ty.down(sim.rt[c.id]);pressed=c;solve();render()}return}drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};return}
+ if(sim){if(cEl&&!tEl){const c=comp(cEl.dataset.c),ty=TY[c.type];if(ty.down){ty.down(sim.rt[c.id],c);pressed=c;solve();render()}return}drag={pan:1,sx:e.clientX,sy:e.clientY,vx:view.x,vy:view.y};return}
  const wv=tg.closest('[data-wv]'),sgm=tg.closest('[data-seg]');
  if(!pending&&sel&&sel.w&&(wv||sgm)){const w=P.wires.find(q=>q.id===sel.w);const L0=routeOf(w).map(p=>p.slice());drag=wv?{wv:+wv.dataset.wv,w,L0,sx:x,sy:y,moved:0}:{seg:+sgm.dataset.seg,w,L0,sx:x,sy:y,moved:0};return}
  if(tEl){const a={c:tEl.dataset.c,t:tEl.dataset.t};
@@ -1148,7 +1150,7 @@ function onDbl(e){if(sim||!sel||!sel.w)return false;const w=P.wires.find(q=>q.id
  else return false;routesDirty=true;save();render();return true}
 cv.addEventListener('dblclick',onDbl);
 const touches=new Map();let pinch=null;
-cv.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;touches.set(e.pointerId,[e.clientX,e.clientY]);if(touches.size===2){const[a,b]=[...touches.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),k:view.k,x:view.x,y:view.y,cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2};drag=null;pending=null;if(pressed&&sim){const ty=TY[pressed.type];if(ty.up)ty.up(sim.rt[pressed.id]);pressed=null}}},true);
+cv.addEventListener('pointerdown',e=>{if(e.pointerType!=='touch')return;touches.set(e.pointerId,[e.clientX,e.clientY]);if(touches.size===2){const[a,b]=[...touches.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),k:view.k,x:view.x,y:view.y,cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2};drag=null;pending=null;if(pressed&&sim){const ty=TY[pressed.type];if(ty.up)ty.up(sim.rt[pressed.id],pressed);pressed=null}}},true);
 addEventListener('pointermove',e=>{if(!touches.has(e.pointerId))return;touches.set(e.pointerId,[e.clientX,e.clientY]);if(pinch&&touches.size===2){const[a,b]=[...touches.values()];const r=cv.getBoundingClientRect();const k=Math.min(3,Math.max(.2,pinch.k*Math.hypot(a[0]-b[0],a[1]-b[1])/pinch.d));const cx=(a[0]+b[0])/2-r.left,cy=(a[1]+b[1])/2-r.top,ox=pinch.cx-r.left,oy=pinch.cy-r.top;view.k=k;view.x=cx-(ox-pinch.x)*k/pinch.k;view.y=cy-(oy-pinch.y)*k/pinch.k;renderView()}},true);
 const tEnd=e=>{touches.delete(e.pointerId);if(touches.size<2)pinch=null};addEventListener('pointerup',tEnd,true);addEventListener('pointercancel',tEnd,true);
 addEventListener('pointermove',e=>{
@@ -1164,7 +1166,7 @@ addEventListener('pointermove',e=>{
   drag.w.pts=A.slice(1,-1);routesDirty=true;render();return}
  const nx=snap(x-drag.ox),ny=snap(y-drag.oy);if(nx!==drag.c.x||ny!==drag.c.y){if(!drag.moved){snapUndo();drag.moved=1;for(const w of P.wires)if((w.a.c===drag.c.id||w.b.c===drag.c.id)&&w.pts&&w.pts.length){w.pts=[];RC.delete(w.id)}}drag.c.x=nx;drag.c.y=ny;drag.bad=overlaps(drag.c);if(!drag.bad.length){drag.okx=nx;drag.oky=ny}routesDirty=true;render()}});
 addEventListener('pointerup',e=>{
- if(pressed){const ty=TY[pressed.type];if(ty.up&&sim){ty.up(sim.rt[pressed.id]);solve();render()}pressed=null}
+ if(pressed){const ty=TY[pressed.type];if(ty.up&&sim){ty.up(sim.rt[pressed.id],pressed);solve();render()}pressed=null}
  if(pending&&!sim){const hit=document.elementFromPoint(e.clientX,e.clientY);const tEl=hit&&hit.closest&&hit.closest('[data-t]');if(tEl&&Math.abs(e.clientX-pending.sx)+Math.abs(e.clientY-pending.sy)>8){const a={c:tEl.dataset.c,t:tEl.dataset.t};if(a.c!==pending.a.c||a.t!==pending.a.t){finishWire(a);ui();render()}}}
  if(drag&&drag.c&&drag.bad&&drag.bad.length){drag.c.x=drag.okx;drag.c.y=drag.oky;drag.bad=[];routesDirty=true;alertMsg('Linh kiện bị chồng lên nhau — đã trả về chỗ trống gần nhất.');render()}
  if(drag){if(drag.moved&&drag.w){tidy(drag.w);routesDirty=true;render()}if(drag.moved)save();if(drag.des&&!sim){sel=null;render()}drag=null}});
@@ -1363,7 +1365,7 @@ function migrateLinks(p){for(const c of p.comps)for(const d of TY[c.type].pdef)i
 function openHome(){if(sim)stopSim();P=null;palOpen=false;$('#ed').classList.add('hide');$('#home').classList.remove('hide');home()}
 home();
 window.EP={plcCompile,recolorAll,rotSel,routeOf,vb:(l1,t1,l2,t2)=>{const N=sim.N,c1=P.comps.find(x=>x.label===l1),c2=P.comps.find(x=>x.label===l2);return Vsets(N.pots[N.net[c1.id+':'+t1]],N.pots[N.net[c2.id+':'+t2]])},conn:(l1,t1,l2,t2)=>{const N=sim.N,c1=P.comps.find(x=>x.label===l1),c2=P.comps.find(x=>x.label===l2);return N.net[c1.id+':'+t1]===N.net[c2.id+':'+t2]},get P(){return P},get sim(){return sim},EX,TY,startSim,stopSim,tick,solve,openEx:i=>{const x=EX[i];P={id:'ex',name:x.name,updated:Date.now(),comps:[],wires:[],ex:1};x.build();openEd()},
- press:(lab,dn)=>{const c=P.comps.find(x=>x.label===lab);const ty=TY[c.type];(dn?ty.down:(ty.up||(()=>{})))(sim.rt[c.id]);solve();render()},rt:lab=>sim.rt[P.comps.find(x=>x.label===lab).id]};
+ press:(lab,dn)=>{const c=P.comps.find(x=>x.label===lab);const ty=TY[c.type];(dn?ty.down:(ty.up||(()=>{})))(sim.rt[c.id],c);solve();render()},rt:lab=>sim.rt[P.comps.find(x=>x.label===lab).id]};
 }
 </script>
 <script>if('serviceWorker' in navigator&&location.protocol==='https:'){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}</script>

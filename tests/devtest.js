@@ -223,6 +223,9 @@ T_('phaodien',()=>{mk((C,W)=>{C('mains1','X');C('tank','TK',{fill:'0',drain:'0'}
  r('TK').lv=50;run(.1);ok('giữa (đang xuống): giữ trạng thái đầy',st()==='01');r('TK').lv=24;run(.1);ok('cạn lại: đen–nâu',st()==='10');stop();
  mk((C,W)=>{C('mains1','X');C('phaodien','B')});ok('chưa thả vào bồn: mặc định cạn',cn('B','BK','B','BN'));tap('B');ok('bấm để đổi',cn('B','BK','B','BU'));stop();
  EP.openEx(EP.EX.length-1);EP.startSim();run(1);ok('ex: mức 40 % lúc đầu → bơm chạy',r('-KM1').on&&r('-M1').run);run(15.5);ok('ex: lên 85 % → bơm dừng',!r('-KM1').on&&r('-TK1').lv>=80,r('-TK1').lv);run(8);ok('ex: đang xuống nhưng trên 25 % → vẫn dừng',!r('-KM1').on,r('-TK1').lv);run(14);ok('ex: xuống 25 % → bơm chạy lại',r('-KM1').on,r('-TK1').lv);EP.stopSim()});
+T_('pb latch + lamp voltage',()=>{mk((C,W)=>{const m=C('mains1','X'),s=C('pb_no','S',{act:T.pb_no.pdef[1][2][1]}),h=C('lamp','H'),h2=C('lamp','H2');W(m,'L',s,'3');W(s,'4',h,'X1');W(h,'X2',m,'N');W(m,'L',h2,'X1')});run(.1);
+ ok('nhấn giữ: chưa nhấn → đèn tắt, 0 V',!r('H').lit&&r('H').vv==='0 V');dn('S');up('S');run(.1);ok('nhấn giữ: thả tay vẫn đóng → đèn sáng 230 V',r('S').p===1&&r('H').lit&&r('H').vv==='230 V AC');tap('S');run(.1);ok('bấm lần nữa → nhả',!r('S').p&&!r('H').lit);
+ ok('đèn chỉ có 1 đầu có điện: không sáng, 0 V',!r('H2').lit&&r('H2').vv==='0 V')});
 // coverage
 const tested=new Set(OUT.map(o=>o[0]).join(' ').split(/[\s\/]+/));const miss=Object.keys(T).filter(k=>![...tested].some(t=>t===k));
 return JSON.stringify({res:OUT,miss})})()

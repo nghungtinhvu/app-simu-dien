@@ -12,9 +12,11 @@
 Sau lần mở đầu tiên, app chạy được cả khi mất mạng.
 
 ## Tính năng
-- 59 linh kiện: nguồn 3P/1P, bộ nguồn 24VDC, biến áp; MCB, MPCB, cầu chì, RCCB/RCBO, rơ le nhiệt, rơ le bảo vệ pha; contactor + khối phụ; rơ le trung gian, timer, timer Y/Δ, rơ le xung, rơ le nháy; nút nhấn, E-stop, công tắc xoay; đèn, còi, đèn tháp; động cơ 3 pha / 6 đầu dây / 1 pha / DC, quạt, sưởi, van điện từ; cảm biến PNP/NPN, phao, thermostat, áp suất; vôn kế, đếm giờ, thứ tự pha; biến tần; PLC mini lập trình được; bồn nước có phao.
+- 59 linh kiện: nguồn 3P/1P, bộ nguồn 24VDC, biến áp; MCB, MPCB, cầu chì, RCCB/RCBO, rơ le nhiệt, rơ le bảo vệ pha; contactor + khối phụ; rơ le trung gian, timer, timer Y/Δ, rơ le xung, rơ le nháy; nút nhấn, E-stop, công tắc xoay; đèn, còi, đèn tháp; động cơ 3 pha / 6 đầu dây / 1 pha / DC, quạt, sưởi, van điện từ; cảm biến PNP/NPN, phao, thermostat, áp suất; vôn kế, đếm giờ, thứ tự pha; biến tần; PLC mini lập trình được; bơm ly tâm 1P/3P; rơ le phao điện 61F; công tắc dòng chảy; bồn nước có phao + que dò; băng tải có cảm biến; xy lanh khí nén + van 5/2.
 - Mô phỏng: điện áp AC/DC, cuộn hút sai điện áp bị cháy, ngắn mạch làm thiết bị bảo vệ nhảy, mất pha, đảo chiều, sao – tam giác.
-- Ví dụ có sẵn: khởi động trực tiếp, đảo chiều, sao – tam giác, PLC, bơm nước theo phao, biến tần.
+- 9 ví dụ: khởi động trực tiếp, đảo chiều, sao – tam giác, PLC, bơm theo phao cơ, biến tần, bơm bằng rơ le 61F + cảm biến dòng chảy, băng tải đếm sản phẩm bằng PLC, xy lanh khí nén bằng PLC.
+- Đi dây tự động tránh linh kiện và tránh chồng dây; chọn dây để kéo đoạn, thêm / xóa điểm uốn (nhấp đúp).
+- Hoạt ảnh: bơm ly tâm quay + nước chảy, bồn nước gợn sóng, băng tải, xy lanh khí nén, quạt, động cơ.
 - Xoay linh kiện (phím R), hoàn tác / làm lại, xuất / nhập dự án dạng JSON.
 
 ## Lưu ý

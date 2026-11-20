@@ -215,9 +215,14 @@ T_('ats01',()=>{const b=(ctl,ext)=>mk((C,W)=>{const m=C('mains3','X'),u=C('ats01
  tap('S1');run(1);ok('stop: decelerating, motor still turning',r('U').st==='stop'&&r('M').run);run(1.2);ok('after decel: off, R1 open',!r('M').run&&!cn('U','R1A','U','R1C'));stop();
  b('2 dây (LI2 = chạy)');tap('S2');run(1);ok('2-wire: pulse does not latch',r('U').st!=='start'||r('U').k<.3);stop();
  mk((C,W)=>{const m=C('mains3','X'),u=C('ats01','U'),M=C('motor3','M');W(m,'L1',u,'L1');W(m,'L2',u,'L2');W(u,'T1',M,'U')});run(.1);ok('missing phase -> no power',!r('U').pw)});
-T_('datasheet examples',()=>{const n=EP.EX.length;EP.openEx(n-2);EP.startSim();run(.5);ok('safety ex: waits for reset',!r('-K1').on);tap('-S1');run(.2);ok('start blocked before reset',!r('-KM1').on);tap('-S3');run(.1);tap('-S1');run(.3);ok('reset then start: KM1+KM2 on, motor runs',r('-KM1').on&&r('-KM2').on&&r('-M1').run,log());
+T_('datasheet examples',()=>{const n=EP.EX.length-1;EP.openEx(n-2);EP.startSim();run(.5);ok('safety ex: waits for reset',!r('-K1').on);tap('-S1');run(.2);ok('start blocked before reset',!r('-KM1').on);tap('-S3');run(.1);tap('-S1');run(.3);ok('reset then start: KM1+KM2 on, motor runs',r('-KM1').on&&r('-KM2').on&&r('-M1').run,log());
  tap('-S0');run(.2);ok('E-stop: both contactors drop, H1 lit',!r('-KM1').on&&!r('-KM2').on&&r('-H1').lit);EP.stopSim();
  EP.openEx(n-1);EP.startSim();tap('-S2');run(2.5);ok('soft-start ex: ramping',r('-U1').st==='start'&&r('-M1').run);run(3);ok('soft-start ex: LO1 lamp lit',r('-H1').lit,log());tap('-S1');run(4);ok('soft-start ex: stopped softly',!r('-M1').run&&!r('-Q1').trip);EP.stopSim()});
+T_('phaodien',()=>{mk((C,W)=>{C('mains1','X');C('tank','TK',{fill:'0',drain:'0'},{lv:10,dr:0});C('phaodien','B',{tank:'TK',low:'25',high:'85'})});run(.1);
+ const st=()=>[cn('B','BK','B','BN'),cn('B','BK','B','BU')].map(Number).join('');ok('cạn: đen–nâu đóng',st()==='10');r('TK').lv=50;run(.1);ok('giữa (đang lên): giữ trạng thái cạn',st()==='10');r('TK').lv=86;run(.1);ok('đầy: đen–xanh đóng',st()==='01');
+ r('TK').lv=50;run(.1);ok('giữa (đang xuống): giữ trạng thái đầy',st()==='01');r('TK').lv=24;run(.1);ok('cạn lại: đen–nâu',st()==='10');stop();
+ mk((C,W)=>{C('mains1','X');C('phaodien','B')});ok('chưa thả vào bồn: mặc định cạn',cn('B','BK','B','BN'));tap('B');ok('bấm để đổi',cn('B','BK','B','BU'));stop();
+ EP.openEx(EP.EX.length-1);EP.startSim();run(1);ok('ex: mức 40 % lúc đầu → bơm chạy',r('-KM1').on&&r('-M1').run);run(15.5);ok('ex: lên 85 % → bơm dừng',!r('-KM1').on&&r('-TK1').lv>=80,r('-TK1').lv);run(8);ok('ex: đang xuống nhưng trên 25 % → vẫn dừng',!r('-KM1').on,r('-TK1').lv);run(14);ok('ex: xuống 25 % → bơm chạy lại',r('-KM1').on,r('-TK1').lv);EP.stopSim()});
 // coverage
 const tested=new Set(OUT.map(o=>o[0]).join(' ').split(/[\s\/]+/));const miss=Object.keys(T).filter(k=>![...tested].some(t=>t===k));
 return JSON.stringify({res:OUT,miss})})()

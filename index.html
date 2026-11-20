@@ -710,7 +710,9 @@ def('tank',{name:'Bồn nước (2 phao + que dò E1 E2 E3)',cat:'qt',pre:'TK',w
   // ống xả
   R(150,bot-10,30,8,r.fout?'#38bdf8':'#475569')+(r.fout?`<path d="M152 ${bot-6} H180" stroke="#bfdbfe" stroke-width="2" stroke-dasharray="4 4" stroke-dashoffset="${(-ph*30).toFixed(1)}"/>`:'')+
   Tx(176,205,lkl(c.params.out)?'xả theo '+lkl(c.params.out):r.dr?'van xả: MỞ (bấm)':'van xả: ĐÓNG (bấm)',6,'#cbd5e1','end')+
-  Tx(29,12,'phao thấp',6,'#fbbf24')+Tx(81,12,'phao cao',6,'#f87171')+Tx(146,12,'que dò',6,'#cbd5e1')}});
+  Tx(29,12,'phao thấp',6,'#fbbf24')+Tx(81,12,'phao cao',6,'#f87171')+Tx(146,12,'que dò',6,'#cbd5e1')+
+  (P?P.comps.filter(x=>x.type==='phaodien'&&lk(x.params.tank)===c):[]).map((pd,j)=>{const cx=104-j*14,lo=+pd.params.low,hi=+pd.params.high;const fl=(v,col)=>{const yy=y(v),up=lv>=v;return`<line x1="${cx}" y1="${yy-14}" x2="${up?cx-9:cx-3}" y2="${up?yy-4:yy}" stroke="#111827" stroke-width="1.6"/><g transform="rotate(${up?-55:-8} ${up?cx-9:cx-3} ${up?yy-4:yy})"><ellipse cx="${up?cx-9:cx-3}" cy="${(up?yy-4:yy)+9}" rx="5.5" ry="9" fill="${col}" stroke="#0b1020"/></g>`};
+   return`<line x1="${cx}" y1="${top-6}" x2="${cx}" y2="${y(lo)-14}" stroke="#111827" stroke-width="2"/><rect x="${cx-4}" y="${y(hi)-22}" width="8" height="10" rx="2" fill="#facc15" stroke="#854d0e"/>`+fl(hi,'#1e3a8a')+fl(lo,'#1e3a8a')+Tx(cx+6,y(hi)-24,pd.label,6,'#fde68a','start',700)}).join('')}});
 
 // ---------- bơm ly tâm có hoạt ảnh ----------
 const pumpPost=base=>(c,r,X,dt)=>{base(c,r,X,dt);const f=X.vfdFor?X.vfdFor(c):null;const k=f===null||f===undefined?1:f/50;
@@ -732,6 +734,21 @@ def('pump1',{name:'Bơm ly tâm 1 pha 230V',cat:'cc',pre:'M',w:180,h:128,ia:1,pa
 def('pump3',{name:'Bơm ly tâm 3 pha 400V',cat:'cc',pre:'M',w:180,h:128,ia:1,params:{q:'10',In:'4.8'},pdef:[['q','Lưu lượng định mức (m³/h)','num'],MPD[0]],at:['U','V','W'],cur:curI,
  terms:[T('U',22,0),T('V',40,0),T('W',58,0),T('PE',76,0)],down:r=>{r.dry=r.dry?0:1},
  post:pumpPost(motorPost(3)),draw:pumpDraw([['U',22],['V',40],['W',58],['PE',76]])});
+
+// ---------- phao điện cáp (2 quả phao trên 1 dây: mức cạn / mức đầy), 3 dây: đen chung, nâu = cấp nước, xanh = xả nước ----------
+//   nước xuống tới phao dưới → đen–nâu đóng (cấp); nước lên tới phao trên → đen–xanh đóng; ở giữa giữ nguyên trạng thái (trễ)
+const pdFull=(c,r,rt)=>{if(r.full!==undefined)return r.full;const t=lk(c.params.tank),lv=t&&rt&&rt[t.id]?rt[t.id].lv:(t?t.st.lv:0);return lv>=(+c.params.low+ +c.params.high)/2?1:0};
+def('phaodien',{name:'Phao điện cáp 3 dây (2 mức: cạn / đầy)',cat:'cb',pre:'B',w:100,h:110,ia:1,params:{tank:'',low:'25',high:'85'},
+ pdef:[['tank','Thả vào bồn','link',['tank']],['low','Mức cạn – phao dưới (%)','num'],['high','Mức đầy – phao trên (%)','num']],
+ terms:[T('BK',20,110),T('BN',50,110),T('BU',80,110)],
+ conns:(c,r,rt)=>pdFull(c,r||{},rt)?[['BK','BU']]:[['BK','BN']],
+ down:r=>{r.full=r.full?0:1},
+ post:(c,r,X)=>{const t=lk(c.params.tank);if(!t||!sim.rt[t.id])return;const lv=sim.rt[t.id].lv,lo=+c.params.low,hi=+c.params.high;let f=pdFull(c,r,sim.rt);if(lv<=lo)f=0;else if(lv>=hi)f=1;r.lv=lv;
+  if(f!==r.full){const first=r.full===undefined;r.full=f;X.dirty();if(!first)X.log('i',`${c.label}: ${f?'nước tới phao trên (đầy) → đen–nâu hở, đen–xanh đóng':'nước xuống phao dưới (cạn) → đen–nâu đóng'}`)}},
+ draw:(c,r)=>{const f=pdFull(c,r||{},sim&&sim.rt),t=lk(c.params.tank);return R(0,0,100,110,'#1e293b','#475569',6)+Tx(50,14,'PHAO ĐIỆN',8,'#e2e8f0','middle',800)+
+  `<ellipse cx="34" cy="40" rx="8" ry="13" fill="#1e3a8a" stroke="#0b1020" transform="rotate(${f?-50:-8} 34 40)"/><ellipse cx="66" cy="44" rx="8" ry="13" fill="#1e3a8a" stroke="#0b1020" transform="rotate(${f?-50:-8} 66 44)"/>`+Tx(34,64,'trên',5.5,'#94a3b8')+Tx(66,64,'dưới',5.5,'#94a3b8')+
+  R(8,70,84,16,f?'#1e3a8a':'#7c2d12','none',3)+Tx(50,81,f?'ĐẦY: đen–xanh':'CẠN: đen–nâu',7,'#fff','middle',700)+Tx(50,94,t?'→ '+lkl(c.params.tank)+` ${c.params.low}–${c.params.high}%`:'bấm để đổi (chưa thả vào bồn)',5.5,'#cbd5e1')+
+  `<circle cx="20" cy="104" r="3" fill="#111"/><circle cx="50" cy="104" r="3" fill="#8b5a2b"/><circle cx="80" cy="104" r="3" fill="#2f80ed"/>`+tag(c.label,50,-10)}});
 
 // ---------- cảm biến dòng chảy ----------
 def('flowsw',{name:'Công tắc dòng chảy (flow switch)',cat:'cb',pre:'B',w:110,h:100,params:{pump:'',t:'1'},pdef:[['pump','Đo trên đường ống của bơm','link',['pump1','pump3']],['t','Trễ xác nhận (s)','num']],
@@ -1284,7 +1301,12 @@ AQ0 = AI0`});const tk=addComp('tank',720,120,'-TK1',{pump:'-M1'});const b1=addCo
  build(){const m=addComp('mains3',40,20,'-X1');const q1=addComp('mpcb',50,160,'-Q1',{Ir:'4'});const u=addComp('ats01',40,380,'-U1');const a=addComp('ameter',30,600,'-P1');const mo=addComp('motor3',40,740,'-M1');
   const s1=addComp('pb_nc',330,620,'-S1');const s2=addComp('pb_no',430,620,'-S2');const h1=addComp('lamp',540,620,'-H1',{color:'Xanh',v:'24VDC'});
   W(m,'L1',q1,'1','đỏ');W(m,'L2',q1,'3','đỏ');W(m,'L3',q1,'5','đỏ');W(q1,'2',u,'L1','đỏ');W(q1,'4',u,'L2','đỏ');W(q1,'6',u,'L3','đỏ');W(u,'T1',a,'1','đỏ');W(a,'2',mo,'U','đỏ');W(u,'T2',mo,'V','đỏ');W(u,'T3',mo,'W','đỏ');W(m,'PE',mo,'PE','vàngxanh');
-  W(u,'LI+',s1,'1','đỏ');W(s1,'2',u,'LI1','đỏ');W(u,'LI+',s2,'3','đỏ');W(s2,'4',u,'LI2','đỏ');W(u,'LO1',h1,'X1','đỏ');W(h1,'X2',u,'COM','xanhđậm')}}];
+  W(u,'LI+',s1,'1','đỏ');W(s1,'2',u,'LI1','đỏ');W(u,'LI+',s2,'3','đỏ');W(s2,'4',u,'LI2','đỏ');W(u,'LO1',h1,'X1','đỏ');W(h1,'X2',u,'COM','xanhđậm')}},
+{name:'Bơm cấp nước bằng phao điện (1 phao, 2 mức)',desc:'Phao điện -B1 thả trong bồn: một sợi cáp có 2 quả phao. Nước xuống tới phao dưới (mức cạn 25 %) thì dây đen–nâu đóng, -KM1 hút, bơm -M1 chạy. Nước lên tới phao trên (mức đầy 85 %) thì đen–nâu hở, bơm dừng. Ở khoảng giữa phao giữ nguyên trạng thái nên không cần mạch tự giữ. Dây xanh (đen–xanh) dùng khi muốn bơm xả. Bấm vào bồn để đóng / mở van xả.',
+ build(){const m=addComp('mains1',40,20,'-X1');const q1=addComp('mcb2',60,150,'-Q1');const km=addComp('contactor',230,330,'-KM1');const pm=addComp('pump1',240,600,'-M1');const tk=addComp('tank',640,200,'-TK1',{pump:'-M1',fill:'6',drain:'3'});tk.st.lv=40;
+  const pd=addComp('phaodien',470,360,'-B1',{tank:'-TK1'});const h=addComp('lamp',480,600,'-H1',{color:'Xanh'});
+  W(m,'L',q1,'1','đỏ');W(m,'N',q1,'3','xanh');W(q1,'2',pd,'BK','đỏ');W(pd,'BN',km,'A1','đỏ');W(km,'A2',q1,'4','xanh');
+  W(q1,'2',km,'1','đỏ');W(km,'2',pm,'L','đỏ');W(q1,'4',km,'3','xanh');W(km,'4',pm,'N','xanh');W(m,'PE',pm,'PE','vàngxanh');W(km,'14',h,'X1','đỏ');W(q1,'2',km,'13','đỏ');W(h,'X2',q1,'4','xanh')}}];
 
 
 // ====================== home ======================

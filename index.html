@@ -54,6 +54,8 @@ button{cursor:pointer}
 #cv text{pointer-events:none}
 .term{cursor:crosshair}
 .term:hover circle.o{stroke:var(--acc2);stroke-width:2.5}
+#world.lz .fer{display:none}
+.term circle.o{transition:fill .15s}
 .wire{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .flow{fill:none;stroke-dasharray:3 9;animation:fl .6s linear infinite;stroke-linecap:round}
 @keyframes fl{to{stroke-dashoffset:-12}}
@@ -138,7 +140,9 @@ button{cursor:pointer}
 <div id="ed" class="hide">
   <svg id="cv" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="#2b2e33"/></pattern>
+      <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1.1" fill="#34383e"/></pattern>
+      <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".12"/></linearGradient>
+      <radialGradient id="scr" cx="38%" cy="32%" r="75%"><stop offset="0" stop-color="#f8fafc"/><stop offset=".55" stop-color="#c3c9d0"/><stop offset="1" stop-color="#6b7280"/></radialGradient>
       <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5"/></filter>
     </defs>
     <rect id="bgr" width="100%" height="100%" fill="url(#dots)"/>
@@ -815,7 +819,7 @@ const OLK={'10A':49,'10':63,'20':126,'30':194};
 const rating=c=>parseFloat(c.params.In||c.params.Ir)||0;
 // nhãn dòng điện + thanh nhiệt, vẽ ở lớp trên cùng (đè lên dây) ngay trên thiết bị
 const ovBadge=c=>{const ty=TY[c.type];if(!ty.ov)return'';const r=sim?sim.rt[c.id]:null;const has=!!r&&r.I!==undefined;const In=rating(c);const t=has?(r.I||0).toFixed(r.I>=10?0:1)+' A':ty.ov==='mp'||ty.ov==='ol'?'Ir '+In+' A':'';if(!t)return'';const th=r&&r.th||0;
- const[x,y,w]=bbox(c);const cx=x+w/2,top=y-24;
+ const[x,y,w]=bbox(c);const cx=x+w/2,top=y-52;
  return R(cx-28,top,56,15,'#0b1220e6','#334155',3)+(th>.01?R(cx-27,top+12,54*th,2,th>.7?'#ef4444':'#f59e0b','none',1):'')+Tx(cx,top+10.5,r&&r.trip&&th>.7?'chờ nguội':t,8,has&&In&&r.I>In*1.05?'#fca5a5':'#cbd5e1','middle',600)};
 
 // ====================== state ======================
@@ -983,18 +987,29 @@ function computeRoutes(){
  for(const[w,E]of ws){if(w.pts&&w.pts.length)continue;let L=RC.get(w.id);if(!L||!valid(L,E)){L=astar(E)||fallback(E);RC.set(w.id,L)}RF.set(w.id,L);mark(L)}}
 const routeOf=w=>{computeRoutes();return RF.get(w.id)};
 const pathD=L=>'M'+L.map(p=>p[0]+' '+p[1]).join(' L');
+// dây bo góc mềm: mỗi góc gập thay bằng cung bậc hai bán kính ≤ 14 px
+const glossR=ty=>`<rect width="${ty.w}" height="${ty.h}" rx="6" fill="url(#gloss)" pointer-events="none"/>`;
+const rpath=(L,rad=14)=>{if(L.length<3)return pathD(L);let d=`M${L[0][0]} ${L[0][1]}`;for(let i=1;i<L.length-1;i++){const a=L[i-1],b=L[i],c=L[i+1];const l1=Math.hypot(b[0]-a[0],b[1]-a[1]),l2=Math.hypot(c[0]-b[0],c[1]-b[1]);if(!l1||!l2)continue;const r=Math.min(rad,l1/2,l2/2);
+ d+=` L${(b[0]-(b[0]-a[0])/l1*r).toFixed(1)} ${(b[1]-(b[1]-a[1])/l1*r).toFixed(1)} Q${b[0]} ${b[1]} ${(b[0]+(c[0]-b[0])/l2*r).toFixed(1)} ${(b[1]+(c[1]-b[1])/l2*r).toFixed(1)}`}const e=L[L.length-1];return d+` L${e[0]} ${e[1]}`};
+// đầu cos + vòng số dây mã màu (0 đen, 1 nâu, 2 đỏ, 3 cam, 4 vàng, 5 lục, 6 lam, 7 tím, 8 xám, 9 trắng)
+const DIGC=['#111827','#7c4a1e','#dc2626','#f97316','#facc15','#16a34a','#2563eb','#7c3aed','#9ca3af','#f9fafb'],DIGT=['#fff','#fff','#fff','#111','#111','#fff','#fff','#fff','#111','#111'];
+function ferrule(p,d,num,col){const s=String(num||''),n=s.length,len=n*8+6,v=d[0]===0;let h=`<path d="M${p[0]+d[0]*5} ${p[1]+d[1]*5}L${p[0]+d[0]*10} ${p[1]+d[1]*10}" stroke="#d1d5db" stroke-width="3.2"/>`;
+ const a=[p[0]+d[0]*10,p[1]+d[1]*10],b=[p[0]+d[0]*(10+len),p[1]+d[1]*(10+len)];const x0=Math.min(a[0],b[0]),y0=Math.min(a[1],b[1]);
+ h+=v?R(x0-5,y0,10,len,col,'#0007',3):R(x0,y0-5,len,10,col,'#0007',3);
+ for(let i=0;i<n;i++){const g=+s[i],o=3+i*8,cx=v?x0:x0+o+4,cy=v?y0+o+4:y0;h+=(v?R(cx-5,cy-4,10,8,DIGC[g],'none',1):R(cx-4,cy-5,8,10,DIGC[g],'none',1))+`<text x="${cx}" y="${cy+2.3}" font-size="6.5" font-weight="700" fill="${DIGT[g]}" text-anchor="middle">${g}</text>`}
+ return h}
 // sửa dây bằng tay: chuyển tuyến đang hiển thị thành điểm uốn
 function materialize(w){const L=routeOf(w);w.pts=L.slice(1,-1).map(p=>p.slice());return L}
 function tidy(w){const E=ends(w);if(!E)return;const L=simplify(orth([E.p1,...w.pts,E.p2]));w.pts=L.slice(1,-1)}
 
 // chỉ đổi khung nhìn (kéo nền, phóng to) — không dựng lại sơ đồ
-function renderView(){if(!P)return;$('#world').setAttribute('transform',`translate(${view.x} ${view.y}) scale(${view.k})`);$('#dots').setAttribute('patternTransform',`translate(${view.x} ${view.y}) scale(${view.k})`)}
+function renderView(){if(!P)return;$('#world').setAttribute('transform',`translate(${view.x} ${view.y}) scale(${view.k})`);$('#world').classList.toggle('lz',view.k<.55);$('#dots').setAttribute('patternTransform',`translate(${view.x} ${view.y}) scale(${view.k})`)}
 // màu dây / màu cực theo kết quả mô phỏng
 function wireLook(w,N,fault){let col=WCOL[w.color]||WCOL.xám,flow='';if(N){const n=N.net[w.a.c+':'+w.a.t];const mp=mainPot(N.pots[n]);if(fault.has(n))col='#facc15';else if(mp)flow=POTC[mp];else if(sim&&sim.sig&&sim.sig.has(n))flow=SIGC}return[flow||col,flow]}
-function termFill(c,t,N){if(N){const n=N.net[c.id+':'+t];const mp=mainPot(N.pots[n]);if(mp)return POTC[mp];if(sim&&sim.sig&&sim.sig.has(n))return SIGC}return'#b8c0c8'}
+function termFill(c,t,N){if(N){const n=N.net[c.id+':'+t];const mp=mainPot(N.pots[n]);if(mp)return POTC[mp];if(sim&&sim.sig&&sim.sig.has(n))return SIGC}return'#3f454d'}
 // khi đang mô phỏng: chỉ cập nhật phần thay đổi
 function renderSim(){const E=sim.el,rt=sim.rt,N=sim.N,fault=new Set(sim.fault||[]);
- for(const c of P.comps){const g=E.cg[c.id];if(!g)continue;const s=TY[c.type].draw(c,rt[c.id]);if(s!==E.cd[c.id]){E.cd[c.id]=s;g.innerHTML=s}}
+ for(const c of P.comps){const g=E.cg[c.id];if(!g)continue;const s=TY[c.type].draw(c,rt[c.id]);if(s!==E.cd[c.id]){E.cd[c.id]=s;g.innerHTML=s+glossR(TY[c.type])}}
  for(const w of P.wires){const e=E.wg[w.id];if(!e)continue;const[col,flow]=wireLook(w,N,fault);const k=col+'|'+flow;if(k!==e.k){e.k=k;e.m.setAttribute('stroke',col);if(flow)e.f.removeAttribute('display');else e.f.setAttribute('display','none')}}
  for(const e of E.tg){const f=termFill(e.c,e.t,N);if(f!==e.v){e.v=f;e.o.setAttribute('fill',f)}}
  for(const e of E.bg){const s=ovBadge(e.c);if(s!==e.v){e.v=s;e.g.innerHTML=s}}}
@@ -1003,20 +1018,22 @@ function render(){
  if(sim&&sim.el){renderSim();return}
  const W=$('#world');const rt=sim?sim.rt:{};const N=sim&&sim.N;const fault=new Set(sim&&sim.fault||[]);const CD={};
  let h='';
+ for(const c of P.comps){const ty=TY[c.type];h+=`<g transform="translate(${c.x} ${c.y})${c.rot?` rotate(${c.rot} ${ty.w/2} ${ty.h/2})`:''}" pointer-events="none">${R(2,6,ty.w,ty.h,'#000','none',10,'opacity=".22"')+R(1,3,ty.w,ty.h,'#000','none',8,'opacity=".25"')}</g>`}
  for(const c of P.comps){const ty=TY[c.type];const r=sim?rt[c.id]:Object.assign({},c.st);const ds=ty.draw(c,r);CD[c.id]=ds;
-  h+=`<g data-c="${c.id}" transform="translate(${c.x} ${c.y})${c.rot?` rotate(${c.rot} ${ty.w/2} ${ty.h/2})`:''}" class="cg ${sim&&ty.ia?'ia':''}" style="cursor:${sim?(ty.ia?'pointer':'default'):'move'}">${ds}${sel&&sel.c===c.id?R(-6,-6,ty.w+12,ty.h+12,'none','#22d3ee',8,'stroke-width="2" stroke-dasharray="5 4"'):''}</g>`}
+  h+=`<g data-c="${c.id}" transform="translate(${c.x} ${c.y})${c.rot?` rotate(${c.rot} ${ty.w/2} ${ty.h/2})`:''}" class="cg ${sim&&ty.ia?'ia':''}" style="cursor:${sim?(ty.ia?'pointer':'default'):'move'}">${ds}${glossR(ty)}${sel&&sel.c===c.id?R(-6,-6,ty.w+12,ty.h+12,'none','#22d3ee',8,'stroke-width="2" stroke-dasharray="5 4"'):''}</g>`}
  computeRoutes();
- for(const w of P.wires){const L=RF.get(w.id);if(!L)continue;const d=pathD(L);const[col,flow]=wireLook(w,N,fault);
+ for(const w of P.wires){const L=RF.get(w.id);if(!L)continue;const d=rpath(L);const[col,flow]=wireLook(w,N,fault);
   const S=sel&&sel.w===w.id;
-  h+=`<g data-w="${w.id}"><path d="${d}" class="wire" stroke="transparent" stroke-width="12"/>`+(S?`<path d="${d}" class="wire" stroke="#22d3ee" stroke-width="6" opacity=".6"/>`:'')+
-   `<path d="${d}" class="wire" stroke="#0008" stroke-width="5"/><path d="${d}" class="wire wm" stroke="${col}" stroke-width="3"/>`+(sim?`<path d="${d}" class="flow" stroke="#fff8" stroke-width="1.6"${flow?'':' display="none"'}/>`:'')+`</g>`}
+  h+=`<g data-w="${w.id}"><path d="${d}" class="wire" stroke="transparent" stroke-width="14"/>`+(S?`<path d="${d}" class="wire" stroke="#22d3ee" stroke-width="15" opacity=".28"/><path d="${d}" class="wire" stroke="#67e8f9" stroke-width="8" opacity=".9"/>`:'')+
+   `<path d="${d}" class="wire" stroke="#000a" stroke-width="7"/><path d="${d}" class="wire wm" stroke="${col}" stroke-width="4.6"/><path d="${d}" class="wire" stroke="#fff" stroke-width="1.3" opacity=".22"/>`+(sim?`<path d="${d}" class="flow" stroke="#fff9" stroke-width="1.8"${flow?'':' display="none"'}/>`:'')+`</g>`}
+ for(const w of P.wires){const E=ends(w);if(!E||!RF.get(w.id))continue;const col=WCOL[w.color]||WCOL.xám;h+=`<g class="fer" pointer-events="none">${ferrule(E.p1,E.d1,w.n,col)+ferrule(E.p2,E.d2,w.n,col)}</g>`}
  for(const c of P.comps)for(const t of TY[c.type].terms){const[x,y]=tpos(c,t.id);const f=termFill(c,t.id,N);
-  h+=`<g class="term" data-c="${c.id}" data-t="${t.id}"><circle cx="${x}" cy="${y}" r="9" fill="transparent"/><circle class="o" cx="${x}" cy="${y}" r="5.5" fill="${f}" stroke="#4b535b" stroke-width="1.2"/><path d="M${x-3} ${y}h6M${x} ${y-3}v6" stroke="#4b535b" stroke-width="1"/></g>`}
+  h+=`<g class="term" data-c="${c.id}" data-t="${t.id}"><circle cx="${x}" cy="${y}" r="10" fill="transparent"/><circle class="o" cx="${x}" cy="${y}" r="7.2" fill="${f}" stroke="#1f2328" stroke-width="1"/><circle cx="${x}" cy="${y}" r="5" fill="url(#scr)" stroke="#4b5563" stroke-width=".8"/><path d="M${x-3} ${y}h6M${x} ${y-3}v6" stroke="#374151" stroke-width="1.5" stroke-linecap="round"/></g>`}
  if(sel&&sel.w&&!sim){const L=RF.get(sel.w);if(L){for(let k=0;k<L.length-1;k++){const a=L[k],b=L[k+1];if(same(a,b))continue;h+=`<path d="M${a[0]} ${a[1]} L${b[0]} ${b[1]}" data-seg="${k}" stroke="transparent" stroke-width="22" style="cursor:${a[1]===b[1]?'ns-resize':'ew-resize'}"/>`}
-  for(let k=1;k<L.length-1;k++)h+=`<g data-wv="${k}" style="cursor:move"><circle cx="${L[k][0]}" cy="${L[k][1]}" r="13" fill="transparent"/><rect x="${L[k][0]-5}" y="${L[k][1]-5}" width="10" height="10" rx="2" fill="#0e7490" stroke="#a5f3fc" stroke-width="1.5"/></g>`}}
+  for(let k=1;k<L.length-1;k++)h+=`<g data-wv="${k}" style="cursor:move"><circle cx="${L[k][0]}" cy="${L[k][1]}" r="20" fill="#22d3ee" opacity=".16"/><circle cx="${L[k][0]}" cy="${L[k][1]}" r="9" fill="#ecfeff" stroke="#22d3ee" stroke-width="3.5"/></g>`}}
  for(const c of P.comps)if(TY[c.type].ov)h+=`<g class="bdg" data-b="${c.id}" pointer-events="none">${ovBadge(c)}</g>`;
  if(pending){const c=comp(pending.a.c);const p=tpos(c,pending.a.t);const pts=[p,...pending.pts,pending.m];let q=p,d='M'+p.join(' ');for(const x of pts.slice(1)){d+=` L${x[0]} ${q[1]} L${x[0]} ${x[1]}`;q=x}
-  h+=`<path d="${d}" class="wire" stroke="${WCOL[wcol]}" stroke-width="3" stroke-dasharray="6 4" pointer-events="none"/>`}
+  h+=`<path d="${d}" class="wire" stroke="${WCOL[wcol]}" stroke-width="4.6" stroke-dasharray="8 5" opacity=".9" pointer-events="none"/>`}
  W.innerHTML=h;
  if(sim){const E={cg:{},cd:CD,wg:{},tg:[],bg:[]};for(const g of W.querySelectorAll(':scope>g.bdg'))E.bg.push({g,c:comp(g.dataset.b),v:g.innerHTML});for(const g of W.querySelectorAll(':scope>g.cg'))E.cg[g.dataset.c]=g;
   for(const g of W.querySelectorAll(':scope>g[data-w]'))E.wg[g.dataset.w]={m:g.querySelector('.wm'),f:g.querySelector('.flow'),k:''};
@@ -1038,7 +1055,7 @@ $('#bar').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)
 function ins(){
  const I=$('#ins');if(!sel||sim){I.classList.add('hide');return}I.classList.remove('hide');if(I.contains(document.activeElement)&&I.dataset.sel===JSON.stringify(sel))return;I.dataset.sel=JSON.stringify(sel);
  if(sel.w){const w=P.wires.find(x=>x.id===sel.w);if(!w){sel=null;I.classList.add('hide');return}
-  I.innerHTML=`<div class="ih"><h3>Dây dẫn</h3><button class="ibtn more" id="iMore">${insOpen?"Thu gọn":"Màu & hướng dẫn"}</button></div><div class="ib"><p class="k">${esc(comp(w.a.c).label)} : ${esc(w.a.t)} → ${esc(comp(w.b.c).label)} : ${esc(w.b.t)}</p><p class="k" style="margin-top:-6px">Kéo một đoạn để dời song song, kéo ô vuông để dời điểm uốn. Nhấp đúp (điện thoại: chạm đúp) lên dây để thêm điểm, lên ô vuông để xóa điểm.</p><label>Màu dây</label><div class="swrow">${Object.entries(WCOL).map(([k,v])=>`<button class="sw ${k===w.color?'on':''}" data-wc="${k}" style="background:${v}" aria-label="${k}"></button>`).join('')}</div></div><div class="row">${w.pts&&w.pts.length?'<button class="btn ghost" id="iStr">Đi lại tự động</button>':''}<button class="btn danger" id="iDel">${ic('trash',16)}Xóa</button></div>`;return}
+  I.innerHTML=`<div class="ih"><h3>Dây dẫn</h3><button class="ibtn more" id="iMore">${insOpen?"Thu gọn":"Màu & hướng dẫn"}</button></div><div class="ib"><p class="k">${esc(comp(w.a.c).label)} : ${esc(w.a.t)} → ${esc(comp(w.b.c).label)} : ${esc(w.b.t)}</p><p class="k" style="margin-top:-6px">Kéo một đoạn để dời song song, kéo chấm tròn để dời điểm uốn. Nhấp đúp (điện thoại: chạm đúp) lên dây để thêm điểm, lên chấm tròn để xóa điểm.</p><label for="iWn">Số dây (vòng đánh số ở hai đầu cos)</label><input id="iWn" type="number" min="0" step="1" value="${esc(w.n||'')}"><label>Màu dây</label><div class="swrow">${Object.entries(WCOL).map(([k,v])=>`<button class="sw ${k===w.color?'on':''}" data-wc="${k}" style="background:${v}" aria-label="${k}"></button>`).join('')}</div></div><div class="row">${w.pts&&w.pts.length?'<button class="btn ghost" id="iStr">Đi lại tự động</button>':''}<button class="btn danger" id="iDel">${ic('trash',16)}Xóa</button></div>`;return}
  const c=comp(sel.c);if(!c){sel=null;I.classList.add('hide');return}const ty=TY[c.type];
  I.innerHTML=`<div class="ih"><h3>${esc(c.label)} · ${esc(ty.name)}</h3><button class="ibtn more" id="iMore" aria-expanded="${insOpen}">${insOpen?"Thu gọn":"Thuộc tính"}</button></div><div class="ib"><p class="k">${CATS.find(x=>x[0]===ty.cat)[1]}</p><label for="iLab">Ký hiệu</label><input id="iLab" value="${esc(c.label)}">`+
   ty.pdef.map(([k,l,o,lt])=>`<label for="ip_${k}">${l}</label>`+(o==='num'?`<input id="ip_${k}" data-p="${k}" type="number" min="0" step="0.5" value="${esc(c.params[k])}">`
@@ -1051,7 +1068,7 @@ $('#ins').addEventListener('click',e=>{const t=e.target.closest('button');if(!t)
  if(t.id==='iMore'){insOpen=!insOpen;$('#ins').classList.toggle('open',insOpen);$('#ins').dataset.sel='';ins();return}
  if(t.id==='iDel')delSel();if(t.id==='iDup')dup();if(t.id==='iRot')rotSel();if(t.id==='iStr'){const w=P.wires.find(x=>x.id===sel.w);snapUndo();w.pts=[];save();render()}});
 $('#ins').addEventListener('input',e=>{if(e.target.tagName==='TEXTAREA'){const pe=$('#perr');const er=plcCompile(e.target.value).err;pe.textContent=er||'✓ Chương trình hợp lệ';pe.classList.toggle('bad',!!er)}});
-$('#ins').addEventListener('change',e=>{const c=sel&&sel.c&&comp(sel.c);if(!c)return;snapUndo();if(e.target.id==='iLab')c.label=e.target.value.trim()||c.label;else if(e.target.dataset.p)c.params[e.target.dataset.p]=e.target.value;save();render()});
+$('#ins').addEventListener('change',e=>{if(e.target.id==='iWn'&&sel&&sel.w){const w=P.wires.find(x=>x.id===sel.w);if(w){snapUndo();w.n=Math.max(0,Math.round(+e.target.value||0))||'';save();render()}return}const c=sel&&sel.c&&comp(sel.c);if(!c)return;snapUndo();if(e.target.id==='iLab')c.label=e.target.value.trim()||c.label;else if(e.target.dataset.p)c.params[e.target.dataset.p]=e.target.value;save();render()});
 function delSel(){if(!sel)return;snapUndo();if(sel.w)P.wires=P.wires.filter(w=>w.id!==sel.w);else{P.comps=P.comps.filter(c=>c.id!==sel.c);P.wires=P.wires.filter(w=>w.a.c!==sel.c&&w.b.c!==sel.c)}sel=null;save();render()}
 function dup(){const c=comp(sel.c);if(!c)return;snapUndo();const n=addComp(c.type,c.x+40,c.y+40,null,c.params);n.rot=c.rot||0;sel={c:n.id};save();render()}
 function rotSel(){const c=sel&&sel.c&&comp(sel.c);if(!c)return;snapUndo();c.rot=((c.rot||0)+90)%360;save();render()}
@@ -1128,7 +1145,8 @@ const PCOL={L1:'đỏ',L2:'đỏ',L3:'đỏ',T1:'đỏ','+24':'đỏ',N:'xanh',T
 function staticNets(){if(sim)return sim.N;const rt={};for(const c of P.comps)rt[c.id]=JSON.parse(JSON.stringify(c.st||{}));const keep=sim;sim={rt,t:0,paused:0,log:[],N:null,quiet:1};try{solve()}catch(e){}const N=sim.N;sim=keep;return N}
 const potColor=(N,e)=>{if(!N)return null;const p=mainPot(N.pots[N.net[e.c+':'+e.t]]);return p?PCOL[p]:null};
 function recolorAll(){const N=staticNets();snapUndo();let n=0;for(const w of P.wires){const c=potColor(N,w.a)||potColor(N,w.b);if(c&&c!==w.color){w.color=c;n++}}save();render();alertMsg(n?`Đã tô lại màu ${n} dây theo nguồn (L đỏ, N xanh, PE vàng-xanh).`:'Màu dây đã đúng theo nguồn.');return n}
-function finishWire(b){snapUndo();let pts=[];if(pending.pts.length){const ca=comp(pending.a.c),cb=comp(b.c);const p1=tpos(ca,pending.a.t),d1=tside(ca,pending.a.t),p2=tpos(cb,b.t),d2=tside(cb,b.t);pts=[[p1[0]+d1[0]*20,p1[1]+d1[1]*20],...pending.pts,[p2[0]+d2[0]*20,p2[1]+d2[1]*20]]}const N0=staticNets();const w={id:uid(),a:pending.a,b,pts,color:potColor(N0,pending.a)||potColor(N0,b)||wcol,v3:1};P.wires.push(w);if(pts.length)tidy(w);pending=null;save()}
+const nextWireNo=()=>P.wires.reduce((m,w)=>Math.max(m,+w.n||0),0)+1;
+function finishWire(b){snapUndo();let pts=[];if(pending.pts.length){const ca=comp(pending.a.c),cb=comp(b.c);const p1=tpos(ca,pending.a.t),d1=tside(ca,pending.a.t),p2=tpos(cb,b.t),d2=tside(cb,b.t);pts=[[p1[0]+d1[0]*20,p1[1]+d1[1]*20],...pending.pts,[p2[0]+d2[0]*20,p2[1]+d2[1]*20]]}const N0=staticNets();const w={n:nextWireNo(),id:uid(),a:pending.a,b,pts,color:potColor(N0,pending.a)||potColor(N0,b)||wcol,v3:1};P.wires.push(w);if(pts.length)tidy(w);pending=null;save()}
 addEventListener('keydown',e=>{if($('#ed').classList.contains('hide')||e.target.matches('input,select'))return;
  if(e.key==='Escape'){pending=null;sel=null;ui();render()}
  if(sim)return;
@@ -1303,7 +1321,7 @@ $('#bak').onclick=()=>{if(!projects.length){alertMsg('Chưa có dự án nào đ
 const alertMsg=m=>{const t=document.createElement('div');t.className='msg w';t.style.cssText='position:fixed;left:50%;bottom:90px;transform:translateX(-50%);z-index:20';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3500)};
 $('#tp').onclick=()=>{tab='p';home()};$('#tx').onclick=()=>{tab='x';home()};
 $('#newp').onclick=()=>modal(`<h3>Dự án mới</h3><input value="Tủ điện ${projects.length+1}"><div class="row"><button class="btn ghost">Hủy</button><button class="btn" data-ok="1">Tạo</button></div>`,v=>{P={id:uid(),name:(v||'').trim()||'Tủ điện',updated:Date.now(),comps:[],wires:[]};projects.unshift(P);persist();palOpen=true;openEd()});
-function openEd(){RC.clear();routesDirty=true;const ids=new Set();P.comps=P.comps.filter(c=>TY[c.type]&&ids.add(c.id));migrateLinks(P);P.wires=P.wires.filter(w=>ids.has(w.a.c)&&ids.has(w.b.c)&&TY[comp(w.a.c).type].terms.some(t=>t.id===w.a.t)&&TY[comp(w.b.c).type].terms.some(t=>t.id===w.b.t));$('#home').classList.add('hide');$('#ed').classList.remove('hide');for(const w of P.wires){if(!w.v3){if(w.pts&&w.pts.length){const E=ends(w);w.pts=[[E.p1[0]+E.d1[0]*14,E.p1[1]+E.d1[1]*14],...w.pts,[E.p2[0]+E.d2[0]*14,E.p2[1]+E.d2[1]*14]];tidy(w)}w.v3=1}}
+function openEd(){RC.clear();routesDirty=true;{let n=P.wires.reduce((m,w)=>Math.max(m,+w.n||0),0);for(const w of P.wires)if(!w.n)w.n=++n}const ids=new Set();P.comps=P.comps.filter(c=>TY[c.type]&&ids.add(c.id));migrateLinks(P);P.wires=P.wires.filter(w=>ids.has(w.a.c)&&ids.has(w.b.c)&&TY[comp(w.a.c).type].terms.some(t=>t.id===w.a.t)&&TY[comp(w.b.c).type].terms.some(t=>t.id===w.b.t));$('#home').classList.add('hide');$('#ed').classList.remove('hide');for(const w of P.wires){if(!w.v3){if(w.pts&&w.pts.length){const E=ends(w);w.pts=[[E.p1[0]+E.d1[0]*14,E.p1[1]+E.d1[1]*14],...w.pts,[E.p2[0]+E.d2[0]*14,E.p2[1]+E.d2[1]*14]];tidy(w)}w.v3=1}}
  $('#pname').value=P.name;undoS=[];redoS=[];sel=null;pending=null;pal();ui();fit()}
 function migrateLinks(p){for(const c of p.comps)for(const d of TY[c.type].pdef)if(d[2]==='link'){const v=c.params[d[0]];if(v&&!p.comps.some(x=>x.id===v)){const x=p.comps.find(x=>x.label===v);c.params[d[0]]=x?x.id:''}}}
 function openHome(){if(sim)stopSim();P=null;palOpen=false;$('#ed').classList.add('hide');$('#home').classList.remove('hide');home()}

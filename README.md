@@ -18,6 +18,7 @@ Sau lần mở đầu tiên, app chạy được cả khi mất mạng.
 - **Analog:** biến trở 0–10 V và cảm biến 4–20 mA (chỉnh tay hoặc đo mức bồn); PLC so sánh `AI0 > 50`, xuất `AQ0 = AI0`; dây tín hiệu analog hiện màu tím khi chạy.
 - 13 ví dụ: khởi động trực tiếp (thử kẹt rôto), đảo chiều, sao – tam giác, PLC, bơm theo phao cơ, biến tần, bơm bằng rơ le 61F + cảm biến dòng chảy, băng tải đếm sản phẩm bằng PLC, xy lanh khí nén bằng PLC, biến tần đặt tốc độ bằng biến trở + ampe kế, bơm theo cảm biến mức 4–20 mA bằng PLC, dừng khẩn an toàn 2 kênh bằng rơ le an toàn, khởi động mềm 3 dây.
 - Màu dây: dây mới tự lấy màu theo nguồn (L đỏ, N xanh, PE vàng-xanh, +24V đỏ, 0V xanh đậm); nút giọt nước tô lại toàn bộ sơ đồ. Khi chạy, dây có pha sáng đỏ, dây N sáng xanh, dây ngắn mạch hiện màu vàng.
+- Giao diện kiểu tủ thật: dây dày bo góc mềm có viền và ánh sáng, đầu cos có vòng số dây mã màu (0 đen, 1 nâu, 2 đỏ, 3 cam, 4 vàng, 5 lục, 6 lam, 7 tím, 8 xám, 9 trắng; sửa số trong bảng thuộc tính của dây, tự ẩn khi thu nhỏ), cực là đầu vít kim loại có vòng màu theo điện thế, linh kiện có bóng đổ, dây đang chọn phát sáng với chấm tròn để kéo.
 - Đi dây tự động tránh linh kiện và tránh chồng dây; chọn dây để kéo đoạn, thêm / xóa điểm uốn (nhấp đúp).
 - Hoạt ảnh: bơm ly tâm quay + nước chảy, bồn nước gợn sóng, băng tải, xy lanh khí nén, quạt, động cơ.
 - Xoay linh kiện (phím R), hoàn tác / làm lại, xuất / nhập dự án dạng JSON.
@@ -29,4 +30,4 @@ Dự án được lưu trong trình duyệt của từng máy (IndexedDB, kèm b
 `python3 tests/run.py` chạy 402 phép kiểm tra logic cho cả 78 loại thiết bị và các ví dụ (cần Playwright + Chromium).
 
 ## Cập nhật app
-Sửa `index.html`, đổi `VERSION` trong `sw.js` (ví dụ `simu-v8`) rồi commit — GitHub Pages tự đăng bản mới sau khoảng 1 phút.
+Sửa `index.html`, đổi `VERSION` trong `sw.js` (ví dụ `simu-v9`) rồi commit — GitHub Pages tự đăng bản mới sau khoảng 1 phút.

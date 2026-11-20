@@ -1,5 +1,5 @@
 // Bộ nhớ đệm offline. Đổi VERSION mỗi lần cập nhật app để máy người dùng tải bản mới.
-const VERSION = 'simu-v4';
+const VERSION = 'simu-v5';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -17,7 +17,7 @@ self.addEventListener('fetch', e => {
       .catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
     return;
   }
-  // Còn lại (icon, font Google): dùng bản đã lưu, đồng thời cập nhật ngầm
+  // Còn lại (icon, manifest): dùng bản đã lưu, đồng thời cập nhật ngầm
   e.respondWith(caches.match(req).then(hit => {
     const net = fetch(req).then(r => { if (r && (r.ok || r.type === 'opaque')) { const cp = r.clone(); caches.open(VERSION).then(c => c.put(req, cp)); } return r; }).catch(() => hit);
     return hit || net;

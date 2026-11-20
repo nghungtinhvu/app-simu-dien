@@ -30,4 +30,4 @@ Dự án được lưu trong trình duyệt của từng máy (IndexedDB, kèm b
 `python3 tests/run.py` chạy 414 phép kiểm tra logic cho cả 79 loại thiết bị và các ví dụ (cần Playwright + Chromium).
 
 ## Cập nhật app
-Sửa `index.html`, đổi `VERSION` trong `sw.js` (ví dụ `simu-v11`) rồi commit — GitHub Pages tự đăng bản mới sau khoảng 1 phút.
+Sửa `index.html`, đổi `VERSION` trong `sw.js` (ví dụ `simu-v12`) rồi commit — GitHub Pages tự đăng bản mới sau khoảng 1 phút.

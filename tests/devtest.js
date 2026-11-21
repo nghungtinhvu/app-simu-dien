@@ -2,8 +2,8 @@
 const T=EP.TY,OUT=[];let cur='';
 const ok=(name,cond,det)=>OUT.push([cur,name,!!cond,det===undefined?'':String(det)]);
 let P;
-// ví dụ tủ bơm bản 7 nằm cuối danh sách; các kiểm thử ví dụ datasheet tính vị trí từ ngay trước nó
-const EXB=EP.EX.findIndex(x=>x.name.startsWith('Tủ bơm giếng 2 HP')),EXEND=(EXB<0?EP.EX.length:EXB)-1;
+// mở ví dụ theo tên (không phụ thuộc thứ tự trong danh sách)
+const exi=name=>{const i=EP.EX.findIndex(x=>x.name===name);if(i<0)throw new Error('không có ví dụ: '+name);return i};
 function mk(build){EP.openEx(0);P=EP.P;P.comps=[];P.wires=[];const C=(t,l,pr,st)=>{if(!T[t])throw new Error('no type '+t);const c={id:l,type:t,x:0,y:0,label:l,params:Object.assign({},T[t].params,pr||{}),st:Object.assign({},T[t].st||{},st||{})};P.comps.push(c);return c};
  const W=(a,ta,b,tb)=>{for(const[c,t]of[[a,ta],[b,tb]])if(!T[c.type].terms.some(x=>x.id===t))throw new Error(`no term ${c.type}.${t}`);P.wires.push({id:Math.random()+'',a:{c:a.id,t:ta},b:{c:b.id,t:tb},pts:[],color:'đỏ',v3:1})};build(C,W);EP.startSim()}
 const run=s=>{for(let i=0;i<Math.round(s*20);i++)EP.tick(.05)};
@@ -134,7 +134,7 @@ T_('mpcb magnetic',()=>{mk((C,W)=>{const m=C('mains3','X'),q=C('mpcb','Q',{Ir:'0
 T_('fuse overload',()=>{mk((C,W)=>{const m=C('mains1','X'),f=C('fuse1','F',{In:'4A'}),h=C('heater','R',{P:'2300'});W(m,'L',f,'1');W(f,'2',h,'L');W(h,'N',m,'N')});run(9);ok('2.5×In: holds 9 s',!r('F').trip);run(4);ok('2.5×In: blows ~11 s',r('F').trip===1);tap('F');ok('new fuse cold',r('F').th===0)});
 T_('vfd current',()=>{mk((C,W)=>{const m=C('mains3','X'),u=C('vfd','U',{f:'50',ramp:'1'}),a=C('ameter','A'),M=C('motor3','M'),s=C('sel','S');W(m,'L1',u,'L1');W(m,'L2',u,'L2');W(m,'L3',u,'L3');W(u,'U',a,'1');W(a,'2',M,'U');W(u,'V',M,'V');W(u,'W',M,'W');W(u,'+24',s,'13');W(s,'14',u,'DI1')});
  tap('S');run(.3);ok('no inrush via VFD',r('A').I<=3.6,r('A').I);run(2);ok('motor current via ammeter',Math.abs(r('A').I-3.5)<.05,r('A').I);ok('VFD input ≈ output',Math.abs(r('U').Iin-3.525)<.05,r('U').Iin)});
-T_('examples smoke',()=>{for(let i=0;i<EP.EX.length;i++){EP.openEx(i);EP.startSim();run(4);const bad=EP.P.comps.filter(c=>EP.sim.rt[c.id].trip||EP.sim.rt[c.id].burnt);ok('ex '+i+' idle 4 s: no trips',!bad.length&&!EP.sim.paused,bad.map(c=>c.label)+' '+log());EP.stopSim()}
+T_('examples smoke',()=>{for(let i=0;i<EP.EX.length;i++){EP.openEx(i);EP.startSim();run(4);const bad=EP.P.comps.filter(c=>{const q=EP.sim.rt[c.id];return q.trip||q.burnt||(q.weld||[]).length});ok('ex '+i+' idle 4 s: no trips, no welded contacts',!bad.length&&!EP.sim.paused,bad.map(c=>c.label)+' '+log());EP.stopSim()}
  EP.openEx(0);EP.startSim();tap('-S2');run(5);ok('DOL runs without trip',r('-M1').run&&!r('-F1').trip,log());tap('-M1');run(12);ok('DOL jam -> F1 trips, H2 lit',r('-F1').trip===1&&r('-H2').lit&&!r('-M1').run,log());EP.stopSim();
  EP.openEx(2);EP.startSim();tap('-S1');run(9);ok('Y/Δ reaches delta, no trips',r('-M1').mode==='Δ'&&!r('-F1').trip&&!r('-Q1').trip,r('-M1').msg+' '+log());EP.stopSim()});
 // ---- analog
@@ -217,14 +217,14 @@ T_('ats01',()=>{const b=(ctl,ext)=>mk((C,W)=>{const m=C('mains3','X'),u=C('ats01
  tap('S1');run(1);ok('stop: decelerating, motor still turning',r('U').st==='stop'&&r('M').run);run(1.2);ok('after decel: off, R1 open',!r('M').run&&!cn('U','R1A','U','R1C'));stop();
  b('2 dây (LI2 = chạy)');tap('S2');run(1);ok('2-wire: pulse does not latch',r('U').st!=='start'||r('U').k<.3);stop();
  mk((C,W)=>{const m=C('mains3','X'),u=C('ats01','U'),M=C('motor3','M');W(m,'L1',u,'L1');W(m,'L2',u,'L2');W(u,'T1',M,'U')});run(.1);ok('missing phase -> no power',!r('U').pw)});
-T_('datasheet examples',()=>{const n=EXEND;EP.openEx(n-2);EP.startSim();run(.5);ok('safety ex: waits for reset',!r('-K1').on);tap('-S1');run(.2);ok('start blocked before reset',!r('-KM1').on);tap('-S3');run(.1);tap('-S1');run(.3);ok('reset then start: KM1+KM2 on, motor runs',r('-KM1').on&&r('-KM2').on&&r('-M1').run,log());
+T_('datasheet examples',()=>{EP.openEx(exi('Dừng khẩn an toàn 2 kênh bằng rơ le an toàn'));EP.startSim();run(.5);ok('safety ex: waits for reset',!r('-K1').on);tap('-S1');run(.2);ok('start blocked before reset',!r('-KM1').on);tap('-S3');run(.1);tap('-S1');run(.3);ok('reset then start: KM1+KM2 on, motor runs',r('-KM1').on&&r('-KM2').on&&r('-M1').run,log());
  tap('-S0');run(.2);ok('E-stop: both contactors drop, H1 lit',!r('-KM1').on&&!r('-KM2').on&&r('-H1').lit);EP.stopSim();
- EP.openEx(n-1);EP.startSim();tap('-S2');run(2.5);ok('soft-start ex: ramping',r('-U1').st==='start'&&r('-M1').run);run(3);ok('soft-start ex: LO1 lamp lit',r('-H1').lit,log());tap('-S1');run(4);ok('soft-start ex: stopped softly',!r('-M1').run&&!r('-Q1').trip);EP.stopSim()});
+ EP.openEx(exi('Khởi động mềm 3 dây (soft starter)'));EP.startSim();tap('-S2');run(2.5);ok('soft-start ex: ramping',r('-U1').st==='start'&&r('-M1').run);run(3);ok('soft-start ex: LO1 lamp lit',r('-H1').lit,log());tap('-S1');run(4);ok('soft-start ex: stopped softly',!r('-M1').run&&!r('-Q1').trip);EP.stopSim()});
 T_('phaodien',()=>{mk((C,W)=>{C('mains1','X');C('tank','TK',{fill:'0',drain:'0'},{lv:10,dr:0});C('phaodien','B',{tank:'TK',low:'25',high:'85'})});run(.1);
  const st=()=>[cn('B','BK','B','BN'),cn('B','BK','B','BU')].map(Number).join('');ok('cạn: đen–nâu đóng',st()==='10');r('TK').lv=50;run(.1);ok('giữa (đang lên): giữ trạng thái cạn',st()==='10');r('TK').lv=86;run(.1);ok('đầy: đen–xanh đóng',st()==='01');
  r('TK').lv=50;run(.1);ok('giữa (đang xuống): giữ trạng thái đầy',st()==='01');r('TK').lv=24;run(.1);ok('cạn lại: đen–nâu',st()==='10');stop();
  mk((C,W)=>{C('mains1','X');C('phaodien','B')});ok('chưa thả vào bồn: mặc định cạn',cn('B','BK','B','BN'));tap('B');ok('bấm để đổi',cn('B','BK','B','BU'));stop();
- EP.openEx(EXEND);EP.startSim();run(1);ok('ex: mức 40 % lúc đầu → bơm chạy',r('-KM1').on&&r('-M1').run);run(15.5);ok('ex: lên 85 % → bơm dừng',!r('-KM1').on&&r('-TK1').lv>=80,r('-TK1').lv);run(8);ok('ex: đang xuống nhưng trên 25 % → vẫn dừng',!r('-KM1').on,r('-TK1').lv);run(14);ok('ex: xuống 25 % → bơm chạy lại',r('-KM1').on,r('-TK1').lv);EP.stopSim()});
+ EP.openEx(exi('Bơm cấp nước bằng phao điện (1 phao, 2 mức)'));EP.startSim();run(1);ok('ex: mức 40 % lúc đầu → bơm chạy',r('-KM1').on&&r('-M1').run);run(15.5);ok('ex: lên 85 % → bơm dừng',!r('-KM1').on&&r('-TK1').lv>=80,r('-TK1').lv);run(8);ok('ex: đang xuống nhưng trên 25 % → vẫn dừng',!r('-KM1').on,r('-TK1').lv);run(14);ok('ex: xuống 25 % → bơm chạy lại',r('-KM1').on,r('-TK1').lv);EP.stopSim()});
 T_('pb latch + lamp voltage',()=>{mk((C,W)=>{const m=C('mains1','X'),s=C('pb_no','S',{act:T.pb_no.pdef[1][2][1]}),h=C('lamp','H'),h2=C('lamp','H2');W(m,'L',s,'3');W(s,'4',h,'X1');W(h,'X2',m,'N');W(m,'L',h2,'X1')});run(.1);
  ok('nhấn giữ: chưa nhấn → đèn tắt, 0 V',!r('H').lit&&r('H').vv==='0 V');dn('S');up('S');run(.1);ok('nhấn giữ: thả tay vẫn đóng → đèn sáng 230 V',r('S').p===1&&r('H').lit&&r('H').vv==='230 V AC');tap('S');run(.1);ok('bấm lần nữa → nhả',!r('S').p&&!r('H').lit);
  ok('đèn chỉ có 1 đầu có điện: không sáng, 0 V',!r('H2').lit&&r('H2').vv==='0 V')});
@@ -252,11 +252,29 @@ T_('sonoff',()=>{const so=(pr,noPw)=>mk((C,W)=>{const m=C('mains1','X'),u=C('son
 for(const[k,a,b,nc]of[['pbl_nc','1','2',1],['pbl_no','3','4',0]])T_(k,()=>{mk((C,W)=>{const m=C('mains1','X'),s=C(k,'S'),h=C('lamp','H');W(m,'L',s,a);W(s,b,h,'X1');W(h,'X2',m,'N');W(m,'L',s,'X1');W(s,'X2',m,'N')});run(.1);
  ok('LED nút sáng 230V',r('S').lit);ok(nc?'NC: thường đóng':'NO: thường hở',!!r('H').lit===!!nc);dn('S');run(.1);ok('nhấn: đổi trạng thái',!!r('H').lit===!nc);up('S');run(.1);ok('thả: trở về',!!r('H').lit===!!nc);stop();
  mk((C,W)=>{const m=C('mains1','X'),s=C(k,'S',{v:'24VDC'});W(m,'L',s,'X1');W(s,'X2',m,'N')});run(.1);ok('LED 24V cấp 230V AC → cháy',r('S').burnt===1)});
-T_('ex tủ bơm bản 7',()=>{ok('có ví dụ',EXB>=0);EP.openEx(EXB);EP.startSim();run(3);ok('nghỉ: H1 sáng, K1 nhả, Sonoff có điện',r('-H1').lit&&!r('-K1').on&&r('-U1').pw&&!r('-U1').n);
+T_('ex tủ bơm bản 7',()=>{const EXB=exi('Tủ bơm giếng 2 HP – bản 7 (19/11/2026)');EP.openEx(EXB);EP.startSim();run(3);ok('nghỉ: H1 sáng, K1 nhả, Sonoff có điện',r('-H1').lit&&!r('-K1').on&&r('-U1').pw&&!r('-U1').n);
  ok('diode không dẫn',!r('-V1').on&&!r('-V2').on);tap('-S1');run(3);ok('MAN: K1, H2, KF; bơm PSC chạy đủ tụ',r('-K1').on&&r('-H2').lit&&r('-KF').on&&r('-M1').run&&!r('-M1').warn&&r('-V2').rev&&!r('-V2').on,r('-M1').warn+log());
- run(20);ok('MAN có nước 23 s: không chốt, không nhảy',r('-M1').run&&!r('-KA').on&&!r('-F1').trip);tap('-M1');run(2.5);ok('mất nước: KA chốt, K1 nhả, KB + LED RESET, Sonoff báo',r('-KA').on&&!r('-K1').on&&r('-KB').on&&r('-S2').lit&&r('-U1').n===1,log());
+ run(20);ok('MAN có nước 23 s: không chốt, không nhảy, không dính tiếp điểm',r('-M1').run&&!r('-KA').on&&!r('-F1').trip&&!EP.P.comps.some(c=>(r(c.label).weld||[]).length));ok('F1 = LRD16, Ir 11 A',EP.rating(EP.P.comps.find(c=>c.label==='-F1'))===11);tap('-M1');run(2.5);ok('mất nước: KA chốt, K1 nhả, KB + LED RESET, Sonoff báo',r('-KA').on&&!r('-K1').on&&r('-KB').on&&r('-S2').lit&&r('-U1').n===1,log());
  tap('-M1');tap('-S2');run(2);ok('RESET: hết lỗi, chạy lại',!r('-KA').on&&r('-K1').on&&!r('-S2').lit);tap('-F1');run(.5);ok('F1 nhảy: K1 nhả, Sonoff báo lần 2',!r('-K1').on&&r('-U1').n===2);tap('-F1');run(.5);stop();
  EP.openEx(EXB);EP.P.comps.find(c=>c.label==='-F1').params.Ir='9.5';const cid=EP.P.comps.find(c=>c.label==='-C1').id;EP.P.wires=EP.P.wires.filter(w=>w.a.c!==cid&&w.b.c!==cid);EP.startSim();tap('-S1');run(1);ok('bỏ tụ: bơm ù, không quay',r('-M1').hum&&!r('-M1').run);run(25);ok('bỏ tụ, F1 đặt 9,5 A: F1 cắt trước khi bơm cháy, Sonoff báo',r('-F1').trip===1&&!r('-M1').burnt&&r('-U1').n>=1,log())});
+T_('định mức tiếp điểm',()=>{const rt=lab=>EP.rating(EP.P.comps.find(c=>c.label===lab));
+ // rơ le 5 A đóng thẳng bơm 7,9 A: dòng khởi động ~47 A → dính ngay, nhả cuộn hút bơm vẫn chạy
+ mk((C,W)=>{const m=C('mains1','X'),k=C('relay','K'),M=C('pump1','M',{In:'7.9'}),s=C('sel','S');W(m,'L',s,'13');W(s,'14',k,'A1');W(k,'A2',m,'N');W(m,'L',k,'11');W(k,'14',M,'L');W(M,'N',m,'N')});
+ tap('S');run(.3);ok('rơ le 5 A đóng bơm 7,9 A → dính 11-14',(r('K').weld||[]).some(p=>p.join()==='11,14'),log());tap('S');run(.3);ok('nhả cuộn hút, bơm vẫn chạy (tiếp điểm dính)',!r('K').on&&r('M').run);stop();
+ // contactor đúng cỡ: không dính, kể cả lúc khởi động 6×In
+ mk((C,W)=>{const m=C('mains3','X'),k=C('contactor','K',{Ie:'9 A'}),M=C('motor3','M',{In:'7.5'});W(m,'L1',k,'A1');W(k,'A2',m,'N');W(m,'L1',k,'1');W(m,'L2',k,'3');W(m,'L3',k,'5');W(k,'2',M,'U');W(k,'4',M,'V');W(k,'6',M,'W')});
+ run(5);ok('LC1D09 + động cơ 7,5 A: không dính',!(r('K').weld||[]).length&&r('M').run);stop();
+ // contactor nhỏ hơn tải điện trở 30 A: nóng dần rồi dính
+ mk((C,W)=>{const m=C('mains1','X'),k=C('contactor','K',{Ie:'9 A'}),h=C('heater','E',{P:'6900'});W(m,'L',k,'A1');W(k,'A2',m,'N');W(m,'L',k,'1');W(k,'2',h,'L');W(h,'N',m,'N')});
+ run(10);ok('9 A mang 30 A: đang nóng, chưa dính',r('K').ct>.1&&!(r('K').weld||[]).length,r('K').ct);run(55);ok('sau ~1 phút: dính 1-2',(r('K').weld||[]).some(p=>p.join()==='1,2'),log());stop();
+ // dự án cũ: contactor chưa có cỡ AC-3 → không xét định mức
+ mk((C,W)=>{const m=C('mains1','X'),k=C('contactor','K',{Ie:''}),h=C('heater','E',{P:'6900'});W(m,'L',k,'A1');W(k,'A2',m,'N');W(m,'L',k,'1');W(k,'2',h,'L');W(h,'N',m,'N')});run(5);ok('chưa chọn cỡ: không xét',!(r('K').ct>0));stop();
+ // RCCB chỉ cảnh báo quá dòng, không tự cắt
+ mk((C,W)=>{const m=C('mains1','X'),q=C('rccb','Q',{In:'25A'}),h=C('heater','E',{P:'9200'});W(m,'L',q,'1');W(m,'N',q,'N');W(q,'2',h,'L');W(h,'N',q,"N'")});run(1);ok('RCCB 25 A mang 40 A: báo quá, vẫn đóng',r('Q').cx>1.5&&r('Q').on&&!(r('Q').weld||[]).length)});
+T_('dải chỉnh Ir',()=>{const rt=lab=>EP.rating(EP.P.comps.find(c=>c.label===lab));
+ mk((C,W)=>{C('ol','F1',{Ir:'11'});C('ol','F2',{rg:'LRD08 (2,5–4 A)',Ir:'11'});C('ol','F3',{Ir:'50'});C('mpcb','Q1',{Ir:'4'});C('mpcb','Q2',{rg:'GV2ME14 (6–10 A)',Ir:'3'});C('mains1','X')});
+ ok('tự chọn: Ir 11 → LRD16, dùng 11 A',rt('F1')===11);ok('LRD08 mà đặt 11 A → bị giới hạn 4 A',rt('F2')===4);ok('Ir 50 vượt LRD35 → 38 A',rt('F3')===38);
+ ok('GV2 tự chọn Ir 4',rt('Q1')===4);ok('GV2ME14 đặt 3 A → 6 A',rt('Q2')===6)});
 // coverage
 const tested=new Set(OUT.map(o=>o[0]).join(' ').split(/[\s\/]+/));const miss=Object.keys(T).filter(k=>![...tested].some(t=>t===k));
 return JSON.stringify({res:OUT,miss})})()

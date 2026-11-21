@@ -995,7 +995,11 @@ idbOpen().then(async db=>{idb=db;if(!db)return;let arr=[];try{arr=JSON.parse(awa
  let ch=false;for(const p of arr){if(!p||!p.id)continue;const i=projects.findIndex(x=>x.id===p.id);if(i<0){projects.push(p);ch=true}else if((p.updated||0)>(projects[i].updated||0)&&projects[i]!==P){projects[i]=p;ch=true}}
  if(ch){projects.sort((a,b)=>(b.updated||0)-(a.updated||0));if(!P)home()}idbPut(db,'projects',JSON.stringify(projects));
  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}});
-const dlFile=(name,text)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)};
+// tải file: trong trang xuất bản trên claude.ai dùng quyền "downloads" (người xem xác nhận); nơi khác dùng link tải thường
+let dlP=null;const dlCap=()=>dlP||(dlP=window.claude&&claude.use?Promise.resolve(claude.use('downloads')).catch(()=>null):Promise.resolve(null));
+const dlLink=(name,text)=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000)};
+const dlFile=async(name,text)=>{const d=await dlCap();if(!d){dlLink(name,text);return}
+ try{await d.save({filename:name,data:text})}catch(e){const c=e&&e.code;if(c!=='declined')alertMsg(c==='rate_limited'?'Đang có một hộp thoại tải xuống, xác nhận nó trước rồi thử lại.':'Trang này không tải file được. Dùng nút Sao chép thay thế.')}};
 const fname=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^\w-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,60)||'du-an';
 let P=null; // current project {id,name,updated,comps,wires,ex?}
 let insOpen=false,view={x:0,y:0,k:1},sel=null,pending=null,drag=null,locked=false,wcol='xám',undoS=[],redoS=[],sim=null,palOpen=false;

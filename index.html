@@ -407,7 +407,7 @@ barDef('barN','Thanh nối N (6 lỗ)','#2f6fd0','N');barDef('barPE','Thanh nố
 
 // ---------- bảo vệ ----------
 const fuseDraw=n=>(c,r)=>R(0,0,n*30+10,110,'#eef0f2','#9aa3ab',4)+strip(n*30+10,2,22)+strip(n*30+10,86,22)+Array.from({length:n},(_,i)=>R(10+i*30,34,20,40,'#f7f7f2','#888',3)+R(14+i*30,46,12,16,r.trip?'#c62828':'#d6b25e','none',2)+Tx(20+i*30,17,String(1+i*2),8)+Tx(20+i*30,100,String(2+i*2),8)).join('')+(r.trip?Tx((n*30+10)/2,82,'ĐỨT',7,'#c62828','middle',700):'')+tag(c.label,(n*30+10)/2,-10);
-def('fuse1',{name:'Cầu chì 1P 10x38',cat:'bv',pre:'F',w:40,h:110,prot:1,ia:1,params:{In:'10A'},pdef:[['In','Dòng định mức (gG)',INL.slice(0,10)]],terms:[T('1',20,0),T('2',20,110)],
+def('fuse1',{name:'Cầu chì 1P 10x38',cat:'bv',pre:'F',w:40,h:110,prot:1,ia:1,params:{In:'10A'},pdef:[['In','Dòng định mức (gG)',['0.315A','0.5A',...INL.slice(0,10)]]],terms:[T('1',20,0),T('2',20,110)],
  conns:(c,r)=>r.trip?[]:[['1','2']],closed:r=>!r.trip,trip:r=>{r.trip=1},down:r=>{r.trip=0;r.th=0},draw:fuseDraw(1)});
 def('fuse3',{name:'Cầu chì 3P 10x38',cat:'bv',pre:'F',w:100,h:110,prot:2,ia:1,params:{In:'10A'},pdef:[['In','Dòng định mức (gG)',INL.slice(0,10)]],terms:[T('1',20,0),T('3',50,0),T('5',80,0),T('2',20,110),T('4',50,110),T('6',80,110)],
  conns:(c,r)=>r.trip?[]:[['1','2'],['3','4'],['5','6']],closed:r=>!r.trip,trip:r=>{r.trip=1},down:r=>{r.trip=0;r.th=0},draw:fuseDraw(3)});
@@ -502,6 +502,15 @@ const myDef=(k,n)=>{const poles=n===2?[1,4]:[1,2,3,4];const w=n===2?110:195;cons
    Tx(14,46,'MY'+n+'N',9,'#1f2937','start',700)+Tx(14,60,r.burnt?'CHÁY CUỘN':c.params.coil,7,r.burnt?'#c62828':'#555','start')+
    poles.map(i=>Tx(xs(i)+9,17,String(8+i),7)+Tx(xs(i),101,String(i),7)+Tx(xs(i)+18,101,String(4+i),7)+`<path d="M${xs(i)+9} 22 L${r.on?xs(i)+18:xs(i)} 86" stroke="#475569" stroke-width="1.5" opacity=".5"/>`).join('')+Tx(w-15,17,'13',7)+Tx(w-15,101,'14',7)+tag(c.label,w/2,73)})};
 myDef('my2',2);myDef('my4',4);
+// ---------- rơ le trung gian 4CO kiểu Schneider RXM4LB2 (đế RXZE2S114M): cuộn A1-A2; cực i (1–4): chung i1 → NC i2 / NO i4
+//   datasheet RXM4LB: tiếp điểm 3 A (AC-1), cuộn 230VAC (P7) / 24VDC (BD)
+def('rxm4',{name:'Rơ le trung gian 4CO (kiểu Schneider RXM4LB2)',cat:'rl',pre:'K',w:190,h:110,params:coilP,pdef:coilD,at:['A1'],cur:(c,r)=>r.on?(c.params.coil==='24VDC'?.04:.02):0,
+ terms:[...[1,2,3,4].map(i=>T(i+'1',22+(i-1)*38,0)),T('A1',175,0),...[1,2,3,4].flatMap(i=>[T(i+'2',12+(i-1)*38,110),T(i+'4',32+(i-1)*38,110)]),T('A2',175,110)],
+ conns:(c,r)=>[1,2,3,4].map(i=>[i+'1',i+(r.on?'4':'2')]),update:coilUpd('A1','A2'),
+ draw:(c,r)=>R(0,0,190,110,'#dfe3e7','#9aa3ab',5)+strip(190,2,22)+strip(190,86,22)+R(10,28,170,52,'#c5d3df','#9fb3c4',4,'opacity=".8"')+
+  `<circle cx="168" cy="40" r="4" fill="${r.on?'#ef4444':'#5a1e1e'}"/>`+Tx(18,46,'RXM4 · 4CO',9,'#333','start',600)+Tx(18,60,r.burnt?'CHÁY CUỘN':c.params.coil,8,r.burnt?'#c62828':'#555','start')+
+  [1,2,3,4].map(i=>{const x=22+(i-1)*38;return Tx(x,17,i+'1',7)+Tx(x-10,101,i+'2',7)+Tx(x+10,101,i+'4',7)+`<path d="M${x} 22 L${r.on?x+10:x-10} 86" stroke="#475569" stroke-width="1.5" opacity=".5"/>`}).join('')+
+  Tx(175,17,'A1',7)+Tx(175,101,'A2',7)+tag(c.label,120,73)});
 
 // ---------- rơ le an toàn E-stop 2 kênh (kiểu Pilz PNOZ X2.8P): A1-A2 24VDC; kênh S11-S12, S21-S22; reset/hồi tiếp S33-S34;
 //            tiếp điểm an toàn 13-14, 23-24, 33-34 (NO); 41-42 phụ (NC)
@@ -826,6 +835,31 @@ def('sonoff',{name:'Sonoff MINI R4 (WiFi, S1-S2 tiếp điểm khô)',cat:'bh',p
   R(58,46,56,26,r.sw?'#fef3c7':'#eef2f7',r.sw?'#f59e0b':'#cbd5e1',5)+Tx(86,57,r.burnt?'CHÁY':r.sw?'📱 ĐÃ BÁO':'📱 '+(r.n?r.n+' lần':'chờ'),6.5,r.burnt?'#dc2626':r.sw?'#b45309':'#475569','middle',700)+Tx(86,67,c.params.mode===SONM[0]?'detach':'thường',5.5,'#64748b')+
   Tx(16,12,'L',7,'#555')+Tx(40,12,'N',7,'#555')+Tx(64,12,'O',7,'#555')+Tx(84,86,'S1',6,'#555')+Tx(106,86,'S2',6,'#555')+tag(c.label,100,-10)});
 
+// ---------- tủ ESP32 giám sát tủ bơm (mô hình đơn giản theo netlist tủ bơm 25/11/2026) ----------
+//   nguồn 230VAC L-N; chân 1–12 = lõi cáp G5: 9 ngõ vào opto 24 VDC so với chân 2 (0 V);
+//   MOSFET 1 (chân 11) / MOSFET 2 (chân 12) đóng = nối chân đó về chân 2 (kéo cuộn KE / KN xuống 0 V);
+//   PZEM-004T: áp PL-PN, dòng qua CT kẹp trên dây bơm (chọn ở thuộc tính). Bấm để đổi lệnh từ điện thoại.
+const ESPIN=[['1','PWR24'],['3','RUN'],['4','FLOAT'],['5','FLOW'],['6','DRY'],['7','FAULT'],['8','KE_FB'],['9','KN_FB'],['10','FULL']];
+const ESPCMD=['TỰ ĐỘNG – không lệnh','CẤM BƠM (MOS1 → KE)','CHẠY NGAY (MOS2 → KN)','ESP TREO / MẤT WIFI'];
+const ESPMSG={DRY:['⚠ CHẠY KHÔ – KA đã chốt','hết chốt chạy khô'],FAULT:['⚠ CÓ LỖI (quá tải / chạy khô)','hết lỗi'],PWR24:['có 24 V','⚠ MẤT 24 V tủ bơm'],RUN:['bơm chạy','bơm dừng']};
+def('esp32io',{name:'Tủ ESP32 giám sát bơm (9 vào 24V, 2 MOSFET, PZEM)',cat:'plc',pre:'U',w:310,h:130,ia:1,params:{pump:''},pdef:[['pump','CT của PZEM kẹp trên dây bơm','link',['pump1','pump3','pumpc']]],
+ at:['L'],cur:(c,r)=>r.pw?.02:0,
+ terms:[T('L',20,0),T('N',44,0),T('PL',100,0),T('PN',124,0),...[1,2,3,4,5,6,7,8,9,10,11,12].map(i=>T(String(i),23+(i-1)*24,130))],
+ conns:(c,r)=>r.run&&r.cmd===1?[['11','2']]:r.run&&r.cmd===2?[['12','2']]:[],
+ down:r=>{r.cmd=((r.cmd||0)+1)%4},
+ update:(c,r,X)=>{const pw=pwrOk(c,r,X,X.coil(c,'L','N','230VAC'),'ESP32');
+  for(const t of['1','3','4','5','6','7','8','9','10','11','12']){const v=X.V(c.id,t,'2'),pi=X.pot(c.id,t);if(!r.burnt&&((v.k==='AC'&&v.v)||phases(pi))){r.burnt=1;X.log('e',`${c.label}: cháy mạch opto/MOSFET (chân ${t} dính điện 230V AC, chỉ được 24 VDC)`)}}
+  const run=pw&&!r.burnt&&(r.cmd||0)!==3;const i={};for(const[t,n]of ESPIN){const v=X.V(c.id,t,'2');i[n]=run&&v.k==='DC'&&Math.abs(v.v)===24}
+  r.pw=pw&&!r.burnt;r.i=i;const o=run?(r.cmd||0):0;const ch=o!==(r.o||0)||run!==!!r.run;r.o=o;r.run=run;return ch},
+ post:(c,r,X)=>{const v=X.V(c.id,'PL','PN');r.vm=v.k==='AC'?v.v:0;const pc=lk(c.params.pump),pr=pc&&sim.rt[pc.id];r.A=r.vm&&pr?(pr.I||0):0;
+  r.pv=r.pv||{};if(!r.run){r.pv={};return}for(const n of['PWR24','RUN','DRY','FAULT']){const now=!!(r.i&&r.i[n]);if(r.pv[n]===undefined){r.pv[n]=now;continue}if(now!==r.pv[n]){r.pv[n]=now;const m=ESPMSG[n][now?0:1];const bad=m[0]==='⚠';if(bad)r.n=(r.n||0)+1;X.log(bad?'w':'i',`📱 ${c.label}: ${m}${bad?` → gửi thông báo (lần ${r.n})`:''}`)}}},
+ draw:(c,r)=>{const i=r.i||{},on=!!r.run;return R(0,0,310,130,r.burnt?'#3f2a2a':'#0f2a1d','#14532d',8)+R(150,10,150,40,'#0b1220','#1e3a8a',4)+Tx(225,24,'ESP32 · '+(r.burnt?'CHÁY':!r.pw?'MẤT NGUỒN':(ESPCMD[r.cmd||0])),7,r.burnt?'#ef4444':on?'#93c5fd':'#fca5a5','middle',700)+
+  Tx(225,40,r.vm?`PZEM ${r.vm} V · ${(r.A||0).toFixed(1)} A · ${Math.round(r.vm*(r.A||0)*.9)} W`:'PZEM: chưa có áp đo',7,'#a7f3d0','middle',600)+
+  `<circle cx="140" cy="20" r="4" fill="${r.pw?'#3b82f6':'#1f2937'}"/>`+Tx(140,34,'WiFi',5.5,'#9ca3af')+Tx(20,12,'L',7,'#d1fae5')+Tx(44,12,'N',7,'#d1fae5')+Tx(100,12,'PL',6.5,'#d1fae5')+Tx(124,12,'PN',6.5,'#d1fae5')+Tx(70,32,'tủ ESP32',9,'#d1fae5','middle',800)+
+  [1,2,3,4,5,6,7,8,9,10,11,12].map(k=>{const x=23+(k-1)*24,e=ESPIN.find(z=>z[0]===String(k));const n=e?e[1]:k===2?'0V':k===11?'MOS1':'MOS2';const lit=e?i[n]:k===11?on&&r.cmd===1:k===12?on&&r.cmd===2:0;
+   return `<circle cx="${x}" cy="88" r="4.5" fill="${lit?(n==='DRY'||n==='FAULT'?'#ef4444':k>10?'#f59e0b':'#22c55e'):'#1f2937'}" stroke="#374151"/>`+`<text x="${x}" y="78" font-size="5.5" fill="#cbd5e1" text-anchor="start" transform="rotate(-60 ${x} 78)">${n}</text>`+Tx(x,122,String(k),6.5,'#d1fae5')}).join('')+
+  (r.n?Tx(10,108,`📱 đã gửi ${r.n} thông báo`,6.5,'#fde68a','start',700):Tx(10,108,'bấm: đổi lệnh từ app',6,'#6b7280','start'))+tag(c.label,280,-10)}});
+
 // ---------- nút nhấn có đèn (kiểu Schneider XA2EW34M2: 1NC + LED 220V X1-X2) ----------
 const pblDef=no=>({name:no?'Nút nhấn có đèn 1NO (3-4) + LED X1-X2':'Nút nhấn có đèn 1NC (1-2) + LED X1-X2 (kiểu XA2EW34M2)',cat:'dk',pre:'S',w:90,h:90,dark:1,ia:1,
  params:{color:no?'Xanh':'Đỏ',act:PBACT[0],v:'230VAC'},pdef:[['color','Màu',['Đỏ','Xanh','Vàng','Trắng']],['act','Kiểu tác động',PBACT],['v','Điện áp đèn',COIL_OPTS]],
@@ -949,6 +983,7 @@ const CRT={
  ol:()=>[{p:pr('95-96','97-98'),A:5,mk:3,n:'tiếp điểm phụ LRD (5 A)'}],
  relay:()=>[{p:pr('11-14','21-24'),A:5,mk:3,n:'tiếp điểm NO (RXM2LB2: 5 A)'},{p:pr('11-12','21-22'),A:2.5,mk:3,n:'tiếp điểm NC (RXM2LB2: 2,5 A)'}],
  my2:()=>[{p:pr('9-5','9-1','12-8','12-4'),A:5,mk:3,n:'tiếp điểm MY2N (5 A)'}],
+ rxm4:()=>[{p:[1,2,3,4].flatMap(i=>[[i+'1',i+'4'],[i+'1',i+'2']]),A:3,mk:3,n:'tiếp điểm RXM4LB2 (3 A)'}],
  my4:()=>[{p:[1,2,3,4].flatMap(i=>[[String(8+i),String(4+i)],[String(8+i),String(i)]]),A:3,mk:3,n:'tiếp điểm MY4N (3 A)'}],
  timer_on:()=>[{p:pr('15-16','15-18'),A:5,mk:3,n:'tiếp điểm timer (5 A)'}],
  timer_off:()=>[{p:pr('15-16','15-18'),A:5,mk:3,n:'tiếp điểm timer (5 A)'}],
@@ -1511,7 +1546,47 @@ AQ0 = AI0`});const tk=addComp('tank',720,120,'-TK1',{pump:'-M1'});const b1=addCo
   W(f1,'97',kb,'A1','đỏ');W(ka,'24',kb,'A1','đỏ');W(kb,'A1',s2,'X1','đỏ');W(kb,'11',u1,'S1','trắng');W(kb,'14',u1,'S2','trắng');
   // 24 V: +V → X3-1 → phao → X3-2 → KR1; +V → X3-4 → flow switch → X3-5 → KF
   W(g1,'+',x31,'1','đỏ');W(x31,'2',b1,'BK','đỏ');W(b1,'BN',x32,'2','đỏ');W(x32,'1',kr,'A1','đỏ');W(kr,'A2',g1,'-','xanhđậm');W(v1,'K',kr,'A1','đỏ');W(v1,'A',kr,'A2','xanhđậm');
-  W(g1,'+',x34,'1','đỏ');W(x34,'2',b2,'11','đỏ');W(b2,'14',x35,'2','đỏ');W(x35,'1',kf,'A1','đỏ');W(kf,'A2',g1,'-','xanhđậm');W(v2,'K',kf,'A1','đỏ');W(v2,'A',kf,'A2','xanhđậm')}}
+  W(g1,'+',x34,'1','đỏ');W(x34,'2',b2,'11','đỏ');W(b2,'14',x35,'2','đỏ');W(x35,'1',kf,'A1','đỏ');W(kf,'A2',g1,'-','xanhđậm');W(v2,'K',kf,'A1','đỏ');W(v2,'A',kf,'A2','xanhđậm')}},
+{name:'Tủ bơm giếng 2 HP – netlist 25/11/2026 (có ESP32)',desc:'Dựng đúng 82 dây của netlist tu-bom-netlist v1 (25/11/2026). Ký hiệu: SUP → -X1, PSU → -G1 (+V/+V2 gộp vào cực +), RST → -S2, PUMP → -M1, PHAO1 → -B1 (đóng ≤ 70 %, hở ≥ 95 %), PHAO2 → -B3 (phao trên, hở khi bồn đầy), FS → -B2, TANK → -TK1, ESP → -U2; cáp G1–G6 nối thẳng. Động lực: RCBO -Q1 25 A → -K1 LC1D25 (L qua 1-2 rồi 3-4 nối tiếp, N qua 5-6) → -F1 LRD16 Ir 11 A → bơm PSC -M1 (C, R, S), tụ -C1 50 µF nối R–S. Điều khiển 230 V qua -Q3 6 A: F1 95-96 → KA 11-12 → -S1 (1 = TAY 13-14; 2 = TỰ ĐỘNG 23-24 → KE 11-12 NC → KR1 11-14 phao gọi hoặc KN 11-14 chạy ngay) → cuộn K1, KT2, đèn H2. Chạy khô: sau 25 s mà -KF chưa hút → -KA (RXM4 4CO) chốt qua 11-14 + RESET NC, H3 THIẾU NƯỚC sáng, KB + LED RESET. F1 nhảy → H4 QUÁ TẢI. ESP32 lấy nguồn trước RCBO qua -Q4 2 A, đọc 9 tín hiệu 24 V qua chuỗi +24 V sau -F3; bấm -U2 để đổi lệnh: CẤM BƠM (kéo KE), CHẠY NGAY (kéo KN, chỉ hút khi bồn chưa đầy), ESP TREO (bơm vẫn chạy theo phao). Bấm -M1 = giếng cạn; bấm -F1 = thử nhảy. Bồn chạy nhanh (cấp 2 %/s, xả 1 %/s) để xem được chu kỳ; thông số bơm là giả định như ghi trong netlist.',
+ build(){const x1=addComp('mains1',40,-160,'-X1');
+  const q1=addComp('rcbo',40,0,'-Q1',{In:'25A',cur:'C'});const q4=addComp('mcb1',150,0,'-Q4',{In:'2A',cur:'C'});const f2=addComp('fuse1',230,0,'-F2',{In:'2A'});const q3=addComp('mcb1',300,0,'-Q3',{In:'6A',cur:'C'});
+  const k1=addComp('contactor',400,0,'-K1',{Ie:'25 A'});const g1=addComp('psu',590,0,'-G1');const f3=addComp('fuse1',720,0,'-F3',{In:'0.315A'});
+  const f1=addComp('ol',410,200,'-F1',{rg:'LRD16 (9–13 A)',Ir:'11',cls:'10'});const c1=addComp('cap',640,200,'-C1',{uF:'50',V:'450'});
+  const kr=addComp('relay',40,380,'-KR1',{coil:'24VDC'});const kf=addComp('relay',200,380,'-KF',{coil:'24VDC'});const ka=addComp('rxm4',360,380,'-KA');const kb=addComp('relay',580,380,'-KB');
+  const kt=addComp('tmr8',740,380,'-KT2',{mode:'A — Trễ đóng (ON-delay)',t:'25'});const ke=addComp('relay',900,380,'-KE',{coil:'24VDC'});const kn=addComp('relay',1060,380,'-KN',{coil:'24VDC'});
+  const h1=addComp('lamp',40,580,'-H1',{color:'Vàng'});const h2=addComp('lamp',120,580,'-H2',{color:'Xanh'});const h3=addComp('lamp',200,580,'-H3',{color:'Trắng'});const h4=addComp('lamp',280,580,'-H4',{color:'Lam'});
+  const s2=addComp('pbl_nc',370,580,'-S2',{color:'Đỏ'});const s1=addComp('sel3',490,580,'-S1');
+  const u2=addComp('esp32io',620,600,'-U2',{pump:'-M1'});
+  const tk=addComp('tank',40,780,'-TK1',{pump:'-M1',low:'20',high:'90',fill:'2',drain:'1'});tk.st.lv=60;
+  const b1=addComp('phaodien',250,800,'-B1',{tank:'-TK1',low:'70',high:'95'});const b3=addComp('phaodien',370,800,'-B3',{tank:'-TK1',low:'96',high:'99'});
+  const b2=addComp('flowsw',500,810,'-B2',{pump:'-M1',t:'4'});const m1=addComp('pumpc',660,800,'-M1',{In:'7.9',q:'3',uF:'50'});
+  // động lực (dây 1–4, 45–49): L qua K1 1-2 → F1 1-2 → nhảy J → K1 3-4 → F1 3-4 → C; N qua K1 5-6 → F1 5-6 → R + tụ
+  W(x1,'L',q1,'1','đỏ');W(x1,'N',q1,'N','xanh');W(q1,'2',k1,'1','đỏ');W(q1,"N'",k1,'5','xanh');
+  W(k1,'2',f1,'1','đỏ');W(k1,'4',f1,'3','đỏ');W(k1,'6',f1,'5','xanh');W(f1,'2',k1,'3','đỏ');
+  W(f1,'4',m1,'C','đỏ');W(f1,'6',m1,'R','xanh');W(f1,'6',c1,'1','xanh');W(c1,'2',m1,'S','nâu');W(x1,'PE',m1,'PE','vàngxanh');
+  // nguồn điều khiển Lc và chuỗi N (5–14)
+  W(k1,'1',q3,'1','đỏ');W(q3,'2',g1,'L','đỏ');W(q3,'2',f1,'95','đỏ');W(f1,'95',f1,'98','đỏ');W(f1,'98',ka,'21','đỏ');
+  W(k1,'5',k1,'A2','xanh');W(k1,'A2',g1,'N','xanh');W(g1,'N',kt,'7','xanh');W(kt,'7',ka,'A2','xanh');W(ka,'A2',kb,'A2','xanh');
+  // mạch logic 230 V (15–26)
+  W(f1,'96',ka,'11','đen');W(ka,'11',kt,'1','đen');W(f1,'97',ka,'24','đen');W(ka,'24',kb,'A1','đen');W(f1,'97',ka,'31','đen');
+  W(kf,'22',ka,'A1','đen');W(kt,'3',kf,'21','đen');W(kr,'14',k1,'A1','đen');W(k1,'A1',kt,'2','đen');
+  W(ke,'12',kr,'11','đen');W(ke,'12',kn,'11','đen');W(kn,'14',kt,'2','đen');
+  // 0 V (27–28)
+  W(g1,'-',kr,'A2','xanhđậm');W(g1,'-',kf,'A2','xanhđậm');
+  // cửa tủ (29–44)
+  W(ka,'12',s1,'13','đen');W(s1,'13',s1,'23','đen');W(kr,'14',s1,'14','đen');W(s1,'14',h2,'X1','đen');
+  W(ka,'14',s2,'1','đen');W(ka,'A1',s2,'2','đen');W(kb,'A1',s2,'X1','đen');W(q3,'1',h1,'X1','đỏ');W(kb,'A2',h1,'X2','xanh');W(h1,'X2',h2,'X2','xanh');
+  W(ke,'11',s1,'24','đen');W(h2,'X2',s2,'X2','xanh');W(ka,'32',h4,'X1','đen');W(s2,'2',h3,'X1','đen');W(s2,'X2',h3,'X2','xanh');W(h3,'X2',h4,'X2','xanh');
+  // phao + flow 24 V (50–53)
+  W(g1,'+',b1,'BK','đỏ');W(b1,'BN',kr,'A1','đỏ');W(g1,'+',b2,'11','đỏ');W(b2,'14',kf,'A1','đỏ');
+  // phía ESP: nguồn và chuỗi +24 V sau F3 (54–64)
+  W(q1,'1',q4,'1','đỏ');W(q1,'2',f2,'1','đỏ');W(g1,'+',f3,'1','đỏ');W(f3,'2',k1,'13','đỏ');W(k1,'13',kr,'21','đỏ');W(kr,'21',kf,'11','đỏ');W(kf,'11',ka,'41','đỏ');
+  W(ka,'41',kb,'21','đỏ');W(kb,'21',ke,'21','đỏ');W(ke,'21',kn,'21','đỏ');W(kn,'21',ke,'A1','đỏ');
+  // cáp G5 sang ESP (65–76), phao trên (77–78), G6 (79–82)
+  W(u2,'1',f3,'2','đỏ');W(u2,'2',kr,'A2','xanhđậm');W(u2,'3',k1,'14','trắng');W(u2,'4',kr,'24','trắng');W(u2,'5',kf,'14','trắng');W(u2,'6',ka,'44','trắng');
+  W(u2,'7',kb,'24','trắng');W(u2,'8',ke,'24','trắng');W(u2,'9',kn,'24','trắng');W(u2,'10',kn,'A1','trắng');W(u2,'11',ke,'A2','xanhđậm');W(u2,'12',kn,'A2','xanhđậm');
+  W(ke,'A1',b3,'BK','đỏ');W(b3,'BN',kn,'A1','đỏ');
+  W(u2,'L',q4,'2','đỏ');W(u2,'N',q1,'N','xanh');W(u2,'PL',f2,'2','đỏ');W(u2,'PN',q1,"N'",'xanh')}}
 ];
 
 

@@ -257,6 +257,27 @@ T_('ex tủ bơm bản 7',()=>{const EXB=exi('Tủ bơm giếng 2 HP – bản 7
  run(20);ok('MAN có nước 23 s: không chốt, không nhảy, không dính tiếp điểm',r('-M1').run&&!r('-KA').on&&!r('-F1').trip&&!EP.P.comps.some(c=>(r(c.label).weld||[]).length));ok('F1 = LRD16, Ir 11 A',EP.rating(EP.P.comps.find(c=>c.label==='-F1'))===11);tap('-M1');run(2.5);ok('mất nước: KA chốt, K1 nhả, KB + LED RESET, Sonoff báo',r('-KA').on&&!r('-K1').on&&r('-KB').on&&r('-S2').lit&&r('-U1').n===1,log());
  tap('-M1');tap('-S2');run(2);ok('RESET: hết lỗi, chạy lại',!r('-KA').on&&r('-K1').on&&!r('-S2').lit);tap('-F1');run(.5);ok('F1 nhảy: K1 nhả, Sonoff báo lần 2',!r('-K1').on&&r('-U1').n===2);tap('-F1');run(.5);stop();
  EP.openEx(EXB);EP.P.comps.find(c=>c.label==='-F1').params.Ir='9.5';const cid=EP.P.comps.find(c=>c.label==='-C1').id;EP.P.wires=EP.P.wires.filter(w=>w.a.c!==cid&&w.b.c!==cid);EP.startSim();tap('-S1');run(1);ok('bỏ tụ: bơm ù, không quay',r('-M1').hum&&!r('-M1').run);run(25);ok('bỏ tụ, F1 đặt 9,5 A: F1 cắt trước khi bơm cháy, Sonoff báo',r('-F1').trip===1&&!r('-M1').burnt&&r('-U1').n>=1,log())});
+T_('rxm4',()=>{mk((C,W)=>{const m=C('mains1','X'),s=C('sel','S'),k=C('rxm4','K'),h=C('lamp','H'),h2=C('lamp','H2');W(m,'L',s,'13');W(s,'14',k,'A1');W(k,'A2',m,'N');W(m,'L',k,'41');W(k,'44',h,'X1');W(h,'X2',m,'N');W(m,'L',k,'31');W(k,'32',h2,'X1');W(h2,'X2',m,'N')});
+ run(.1);ok('nhả: 31-32 đóng, 41-44 hở',r('H2').lit&&!r('H').lit&&[1,2,3,4].every(i=>cn('K',i+'1','K',i+'2')));tap('S');run(.1);ok('hút: 4 cực sang NO',r('K').on&&r('H').lit&&!r('H2').lit&&[1,2,3,4].every(i=>cn('K',i+'1','K',i+'4')&&!cn('K',i+'1','K',i+'2')));stop();
+ mk((C,W)=>{const m=C('mains1','X'),k=C('rxm4','K',{coil:'24VDC'});W(m,'L',k,'A1');W(k,'A2',m,'N')});run(.1);ok('cuộn 24VDC cấp 230VAC → cháy',r('K').burnt===1)});
+T_('esp32io',()=>{const B=(C,W,pr)=>{const m=C('mains1','X'),g=C('psu','G'),u=C('esp32io','U',pr),k=C('relay','KE',{coil:'24VDC'}),s=C('sel','S');W(m,'L',g,'L');W(m,'N',g,'N');W(m,'L',u,'L');W(m,'N',u,'N');W(g,'-',u,'2');W(g,'+',s,'13');W(s,'14',u,'6');W(g,'+',k,'A1');W(k,'A2',u,'11');return{m,u}};
+ mk((C,W)=>B(C,W));run(.2);ok('có nguồn, chưa lệnh: MOS1 hở, KE nhả',r('U').pw&&!r('KE').on);tap('S');run(.2);ok('ngõ vào 6 nhận 24 V → DRY, gửi thông báo',r('U').i.DRY&&r('U').n===1,log());
+ tap('U');run(.2);ok('lệnh CẤM: MOS1 kéo KE hút',r('KE').on);tap('U');run(.2);ok('lệnh CHẠY NGAY: MOS1 hở',!r('KE').on);tap('U');run(.2);ok('ESP treo: không đọc, không lệnh',!r('U').i.DRY&&!r('KE').on);stop();
+ mk((C,W)=>{const{m,u}=B(C,W);});run(.1);EP.rt('U').cmd=1;run(.2);ok('CẤM giữ khi có nguồn',r('KE').on);stop();
+ mk((C,W)=>{const m=C('mains1','X'),g=C('psu','G'),u=C('esp32io','U',{}),k=C('relay','KE',{coil:'24VDC'});W(m,'L',g,'L');W(m,'N',g,'N');W(g,'-',u,'2');W(g,'+',k,'A1');W(k,'A2',u,'11')},);run(.1);EP.rt('U').cmd=1;run(.2);ok('ESP mất nguồn: KE nhả (an toàn)',!r('U').pw&&!r('KE').on);stop();
+ mk((C,W)=>{const m=C('mains1','X'),u=C('esp32io','U');W(m,'L',u,'L');W(m,'N',u,'N');W(m,'N',u,'2');W(m,'L',u,'5')});run(.1);ok('ngõ vào dính 230 V → cháy',r('U').burnt===1)});
+T_('ex tủ bơm netlist 25/11',()=>{const EXB=exi('Tủ bơm giếng 2 HP – netlist 25/11/2026 (có ESP32)');EP.openEx(EXB);EP.startSim();run(2);
+ ok('đủ dây theo netlist (71 dây trong tủ + 11 dây ra ngoài, cáp nối thẳng, + 3 cầu F1–K1, + PE bơm)',EP.P.wires.length===86,EP.P.wires.length);
+ ok('nghỉ (S1 = 0): H1 sáng, K1 nhả, ESP thấy 24 V + phao gọi',r('-H1').lit&&!r('-K1').on&&r('-U2').i.PWR24&&r('-U2').i.FLOAT&&r('-U2').i.FULL);
+ tap('-S1');run(10);ok('TAY: K1, H2, KF hút, bơm 7,9 A, PZEM đọc dòng',r('-K1').on&&r('-H2').lit&&r('-KF').on&&r('-M1').run&&Math.abs(r('-U2').A-7.9)<.2&&r('-U2').i.RUN&&r('-U2').i.FLOW);
+ tap('-S1');run(30);ok('TỰ ĐỘNG: đầy tới 95 % thì dừng',!r('-K1').on&&!r('-KR1').on&&r('-TK1').lv>90,r('-TK1').lv);
+ tap('-U2');run(.5);ok('ESP CẤM: KE hút, có hồi tiếp KE_FB',r('-KE').on&&r('-U2').i.KE_FB);tap('-U2');run(.5);ok('ESP CHẠY NGAY: KN hút, bơm chạy khi phao chưa gọi',r('-KN').on&&r('-K1').on&&!r('-KR1').on);
+ {let t=0;while(r('-KN').on&&t<60){run(.5);t+=.5}}ok('CHẠY NGAY: bồn tới 99 % → phao trên hở → KN nhả, bơm dừng',!r('-KN').on&&!r('-K1').on&&r('-TK1').lv>=98,r('-TK1').lv);tap('-U2');tap('-U2');run(.5);
+ EP.rt('-TK1').lv=50;run(2);ok('lại TỰ ĐỘNG theo phao',r('-K1').on);tap('-M1');run(27);ok('giếng cạn 25 s: KA chốt, K1 nhả, H3 + LED RESET, ESP báo DRY + FAULT',r('-KA').on&&!r('-K1').on&&r('-H3').lit&&r('-S2').lit&&!r('-H4').lit&&r('-U2').i.DRY&&r('-U2').i.FAULT,log());
+ tap('-M1');tap('-S2');run(2);ok('RESET: hết chốt, chạy lại',!r('-KA').on&&r('-K1').on&&!r('-H3').lit);tap('-F1');run(.5);ok('F1 nhảy: dừng, H4 QUÁ TẢI, LED RESET, ESP FAULT',!r('-K1').on&&r('-H4').lit&&r('-S2').lit&&r('-U2').i.FAULT&&!r('-U2').i.DRY);tap('-F1');run(.5);
+ tap('-Q4');run(.5);ok('tắt Q4 (ESP mất nguồn): bơm vẫn chạy theo phao',!r('-U2').pw&&r('-K1').on);tap('-Q4');run(.5);
+ tap('-Q1');run(.5);ok('RCBO cắt: ESP vẫn có nguồn, báo mất 24 V',r('-U2').pw&&!r('-U2').i.PWR24&&/MẤT 24 V/.test(log()));tap('-Q1');run(.5);
+ ok('không cháy, không dính tiếp điểm',!EP.P.comps.some(c=>r(c.label).burnt||(r(c.label).weld||[]).length),log())});
 T_('định mức tiếp điểm',()=>{const rt=lab=>EP.rating(EP.P.comps.find(c=>c.label===lab));
  // rơ le 5 A đóng thẳng bơm 7,9 A: dòng khởi động ~47 A → dính ngay, nhả cuộn hút bơm vẫn chạy
  mk((C,W)=>{const m=C('mains1','X'),k=C('relay','K'),M=C('pump1','M',{In:'7.9'}),s=C('sel','S');W(m,'L',s,'13');W(s,'14',k,'A1');W(k,'A2',m,'N');W(m,'L',k,'11');W(k,'14',M,'L');W(M,'N',m,'N')});
